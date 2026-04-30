@@ -4,6 +4,7 @@
 // ==========================================================
 
 const LOCAL_PLAYER_ID_KEY = 'ttsb_player_id';
+const LOCAL_SETUP_COMPLETE_KEY = 'ttsb_setup_complete';
 
 let db = null;
 let isFirebaseReady = false;
@@ -84,6 +85,7 @@ function createDefaultPlayer(playerId) {
         equippedSkills: [],
         wins: 0,
         losses: 0,
+        initialSetupCompleted: false,
         createdAt: isFirebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : null,
         updatedAt: isFirebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : null
     };
@@ -110,7 +112,8 @@ function normalizePlayerData(data, playerId) {
         skills: Array.isArray(data?.skills) ? data.skills : [],
         equippedSkills: Array.isArray(data?.equippedSkills) ? data.equippedSkills : [],
         wins: Number.isFinite(data?.wins) ? data.wins : 0,
-        losses: Number.isFinite(data?.losses) ? data.losses : 0
+        losses: Number.isFinite(data?.losses) ? data.losses : 0,
+        initialSetupCompleted: data?.initialSetupCompleted === true
     };
 
     if (normalized.level < 1) {
@@ -143,6 +146,7 @@ function mapPlayerToFirestoreData(targetPlayer, playerId) {
         equippedSkills: Array.isArray(targetPlayer.equippedSkills) ? targetPlayer.equippedSkills : [],
         wins: Number.isFinite(targetPlayer.wins) ? targetPlayer.wins : 0,
         losses: Number.isFinite(targetPlayer.losses) ? targetPlayer.losses : 0,
+        initialSetupCompleted: targetPlayer.initialSetupCompleted === true,
         updatedAt: nowTimestamp
     };
 }
@@ -162,6 +166,7 @@ function applyPlayerDataToRuntime(data) {
     player.equippedSkills = data.equippedSkills;
     player.wins = data.wins;
     player.losses = data.losses;
+    player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
 }
 
@@ -188,6 +193,9 @@ async function savePlayerData(saveLabel = '保存中...') {
 }
 
 function getAutoSaveLabel(reasons) {
+    if (reasons.includes('initial_setup')) {
+        return '初期設定を保存中...';
+    }
     if (reasons.includes('battle_finished')) {
         return '試合後自動保存中...';
     }
@@ -325,7 +333,8 @@ const player = {
     skills: [],     // 所持スキルID
     equippedSkills: [], // 装備中スキルID
     wins: 0,
-    losses: 0
+    losses: 0,
+    initialSetupCompleted: false  // 初期設定完了フラグ
 };
 
 // 戦型データ - 9種類 + 各説明
@@ -1431,6 +1440,7 @@ function updateStats() {
     document.getElementById('staBar').style.width = (player.sta / maxStat * 100) + '%';
 }
 
+// ============================================================
 // 戦型情報を表示
 function updateStyleInfo() {
     if (player.style === null) {
@@ -1442,10 +1452,17 @@ function updateStyleInfo() {
         document.getElementById('styleDescription').textContent = style.description;
     }
 
+    const locked = isSetupComplete();
+    const lockBadge = document.getElementById('styleLockBadge');
+    if (lockBadge) {
+        lockBadge.style.display = locked ? 'inline-block' : 'none';
+    }
+
     const styleButtons = document.querySelectorAll('.style-btn');
     styleButtons.forEach(btn => {
         const btnStyle = Number(btn.getAttribute('data-style'));
         btn.classList.toggle('active', btnStyle === player.style);
+        btn.disabled = locked;
     });
 }
 
@@ -2154,6 +2171,10 @@ function setupStyleButtons() {
     const styleButtons = document.querySelectorAll('.style-btn');
     styleButtons.forEach(button => {
         button.addEventListener('click', function() {
+            if (isSetupComplete()) {
+                addLog('戦型は初期設定後に変更できません。', 'warning');
+                return;
+            }
             const styleIndex = parseInt(this.getAttribute('data-style'), 10);
             styleButtons.forEach(btn => btn.classList.remove('active'));
             this.classList.add('active');
@@ -2337,6 +2358,149 @@ function getStatName(stat) {
 }
 
 // ============================================================
+// 初回セットアップ
+// ============================================================
+
+let setupSelectedStyleIndex = null;
+let setupPlayerName = '';
+
+function isSetupComplete() {
+    // player.style !== null handles backwards compatibility for existing players
+    // who had a style set before the initialSetupCompleted flag was introduced
+    return player.initialSetupCompleted ||
+           localStorage.getItem(LOCAL_SETUP_COMPLETE_KEY) === '1' ||
+           player.style !== null;
+}
+
+function showSetupOverlay() {
+    const overlay = document.getElementById('setupOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+}
+
+function hideSetupOverlay() {
+    const overlay = document.getElementById('setupOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+function renderSetupStyleList() {
+    const container = document.getElementById('setupStyleList');
+    if (!container) {
+        return;
+    }
+
+    const categories = ['攻撃系', 'カウンター系', '守備系'];
+    container.innerHTML = categories.map(cat => {
+        const catStyles = styles.filter(s => s.category === cat);
+        return `
+            <div class="setup-style-category">
+                <h4 class="setup-style-cat-label">${cat}</h4>
+                <div class="setup-style-buttons">
+                    ${catStyles.map(style => `
+                        <button class="setup-style-btn" data-style="${style.id}">${style.name}</button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function completeInitialSetup(name, styleIndex) {
+    player.name = name;
+    player.style = styleIndex;
+    player.initialSetupCompleted = true;
+
+    localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, '1');
+
+    hideSetupOverlay();
+    renderAll();
+
+    addLog(`選手名「${name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
+    autoSavePlayer('initial_setup');
+}
+
+function setupInitialSetupOverlay() {
+    renderSetupStyleList();
+
+    const step1 = document.getElementById('setupStep1');
+    const step2 = document.getElementById('setupStep2');
+    const nameInput = document.getElementById('setupNameInput');
+    const step1NextBtn = document.getElementById('setupStep1NextBtn');
+    const confirmBtn = document.getElementById('setupConfirmBtn');
+
+    if (!step1 || !step2 || !nameInput || !step1NextBtn || !confirmBtn) {
+        return;
+    }
+
+    step1NextBtn.addEventListener('click', function() {
+        const name = nameInput.value.trim();
+        const nameError = document.getElementById('setupNameError');
+        if (!name) {
+            nameInput.focus();
+            nameInput.classList.add('setup-input-error');
+            if (nameError) {
+                nameError.style.display = 'block';
+            }
+            return;
+        }
+        nameInput.classList.remove('setup-input-error');
+        if (nameError) {
+            nameError.style.display = 'none';
+        }
+        setupPlayerName = name;
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        setupSelectedStyleIndex = null;
+        confirmBtn.disabled = true;
+    });
+
+    nameInput.addEventListener('input', function() {
+        nameInput.classList.remove('setup-input-error');
+        const nameError = document.getElementById('setupNameError');
+        if (nameError) {
+            nameError.style.display = 'none';
+        }
+    });
+
+    const setupStyleList = document.getElementById('setupStyleList');
+    if (setupStyleList) {
+        setupStyleList.addEventListener('click', function(event) {
+            const btn = event.target.closest('.setup-style-btn');
+            if (!btn) {
+                return;
+            }
+
+            const styleIndex = parseInt(btn.getAttribute('data-style'), 10);
+            setupSelectedStyleIndex = styleIndex;
+
+            document.querySelectorAll('.setup-style-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const selectedStyleInfo = document.getElementById('setupSelectedStyleInfo');
+            if (selectedStyleInfo) {
+                const style = styles[styleIndex];
+                selectedStyleInfo.innerHTML = `
+                    <strong>${style.name}</strong>
+                    <p>${style.description}</p>
+                `;
+            }
+
+            confirmBtn.disabled = false;
+        });
+    }
+
+    confirmBtn.addEventListener('click', function() {
+        if (!setupPlayerName || setupSelectedStyleIndex === null) {
+            return;
+        }
+        completeInitialSetup(setupPlayerName, setupSelectedStyleIndex);
+    });
+}
+
+// ============================================================
 // ゲーム初期化
 // ============================================================
 
@@ -2361,6 +2525,11 @@ async function initGame() {
     setupRivalButtons();
     setupDebugSkillButton();
     setupManualSaveButton();
+    setupInitialSetupOverlay();
+
+    if (!isSetupComplete()) {
+        showSetupOverlay();
+    }
 
     if (isFirebaseReady) {
         updateSaveStatus('待機中');

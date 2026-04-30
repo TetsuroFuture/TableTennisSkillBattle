@@ -7,6 +7,37 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- 初回セットアップオーバーレイ -->
+    <div id="setupOverlay" class="setup-overlay" style="display:none;">
+        <div class="setup-modal">
+            <div class="setup-header">
+                <h2>🏓 選手プロフィール設定</h2>
+                <p class="setup-subtitle">初回起動の設定です。一度設定すると変更できません。</p>
+            </div>
+
+            <!-- STEP 1: 選手名入力 -->
+            <div class="setup-step" id="setupStep1">
+                <p class="setup-step-label">STEP 1 / 2 &mdash; 選手名入力</p>
+                <input type="text" id="setupNameInput" class="setup-name-input"
+                       placeholder="選手名を入力（例: 山田太郎）" maxlength="20">
+                <p class="setup-name-error" id="setupNameError" style="display:none;">選手名を入力してください</p>
+                <p class="setup-note">※ 選手名は後から変更できません</p>
+                <button class="setup-btn-next" id="setupStep1NextBtn">次へ →</button>
+            </div>
+
+            <!-- STEP 2: 戦型選択 -->
+            <div class="setup-step" id="setupStep2" style="display:none;">
+                <p class="setup-step-label">STEP 2 / 2 &mdash; 戦型選択</p>
+                <p class="setup-note">※ 戦型は後から変更できません。慎重に選んでください。</p>
+                <div id="setupStyleList" class="setup-style-list"></div>
+                <div class="setup-selected-info" id="setupSelectedStyleInfo">
+                    <p>戦型を選択してください</p>
+                </div>
+                <button class="setup-btn-confirm" id="setupConfirmBtn" disabled>この設定で始める ✓</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- タイトル -->
         <header class="header">
@@ -86,8 +117,8 @@
             </section>
 
             <!-- 戦型選択セクション -->
-            <section class="style-select-section">
-                <h2>戦型選択</h2>
+            <section class="style-select-section" id="styleSelectSection">
+                <h2>戦型選択 <span class="style-lock-badge" id="styleLockBadge" style="display:none;">🔒 変更不可</span></h2>
                 <div class="style-buttons-container">
                     <div class="style-category">
                         <h3>攻撃系</h3>
