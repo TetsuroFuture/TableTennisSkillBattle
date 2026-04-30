@@ -2362,8 +2362,11 @@ function getStatName(stat) {
 // ============================================================
 
 let setupSelectedStyleIndex = null;
+let setupPlayerName = '';
 
 function isSetupComplete() {
+    // player.style !== null handles backwards compatibility for existing players
+    // who had a style set before the initialSetupCompleted flag was introduced
     return player.initialSetupCompleted ||
            localStorage.getItem(LOCAL_SETUP_COMPLETE_KEY) === '1' ||
            player.style !== null;
@@ -2434,12 +2437,20 @@ function setupInitialSetupOverlay() {
 
     step1NextBtn.addEventListener('click', function() {
         const name = nameInput.value.trim();
+        const nameError = document.getElementById('setupNameError');
         if (!name) {
             nameInput.focus();
             nameInput.classList.add('setup-input-error');
+            if (nameError) {
+                nameError.style.display = 'block';
+            }
             return;
         }
         nameInput.classList.remove('setup-input-error');
+        if (nameError) {
+            nameError.style.display = 'none';
+        }
+        setupPlayerName = name;
         step1.style.display = 'none';
         step2.style.display = 'block';
         setupSelectedStyleIndex = null;
@@ -2448,6 +2459,10 @@ function setupInitialSetupOverlay() {
 
     nameInput.addEventListener('input', function() {
         nameInput.classList.remove('setup-input-error');
+        const nameError = document.getElementById('setupNameError');
+        if (nameError) {
+            nameError.style.display = 'none';
+        }
     });
 
     const setupStyleList = document.getElementById('setupStyleList');
@@ -2478,11 +2493,10 @@ function setupInitialSetupOverlay() {
     }
 
     confirmBtn.addEventListener('click', function() {
-        const name = document.getElementById('setupNameInput')?.value.trim();
-        if (!name || setupSelectedStyleIndex === null) {
+        if (!setupPlayerName || setupSelectedStyleIndex === null) {
             return;
         }
-        completeInitialSetup(name, setupSelectedStyleIndex);
+        completeInitialSetup(setupPlayerName, setupSelectedStyleIndex);
     });
 }
 

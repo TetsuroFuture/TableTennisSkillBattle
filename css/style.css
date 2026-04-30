@@ -1216,6 +1216,13 @@ section h3 {
     border-color: #e03131;
 }
 
+.setup-name-error {
+    font-size: 12px;
+    color: #e03131;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
 .setup-note {
     font-size: 12px;
     color: #868e96;
