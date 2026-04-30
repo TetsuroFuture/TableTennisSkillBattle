@@ -59,6 +59,11 @@ function updateSaveStatus(message) {
         return;
     }
     statusElement.textContent = message;
+
+    const settingsSaveStatusEl = document.getElementById('settingsSaveStatus');
+    if (settingsSaveStatusEl) {
+        settingsSaveStatusEl.textContent = message;
+    }
 }
 
 function setManualSaveButtonEnabled(enabled) {
@@ -1784,6 +1789,19 @@ function renderAll() {
     renderRivals();
     updateCurrentModeLabel(currentBattleMode);
     renderCharacters();
+    renderSettings();
+}
+
+function renderSettings() {
+    const nameEl = document.getElementById('settingsPlayerName');
+    if (nameEl) {
+        nameEl.textContent = player.name;
+    }
+
+    const styleEl = document.getElementById('settingsStyleName');
+    if (styleEl) {
+        styleEl.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    }
 }
 
 function renderEquippedSkills() {

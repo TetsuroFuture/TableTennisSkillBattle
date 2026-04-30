@@ -1666,6 +1666,72 @@ section h3 {
     font-size: 14px;
 }
 
+/* 設定画面 */
+.settings-save-section {
+    border-left-color: #20c997;
+}
+
+.settings-items-section {
+    border-left-color: #667eea;
+}
+
+.settings-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-item-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 14px 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-item-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.settings-item-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.settings-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.settings-item-label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+}
+
+.settings-item-status {
+    font-size: 12px;
+    color: #adb5bd;
+    font-weight: 600;
+}
+
+.settings-back-row {
+    margin-top: 8px;
+    display: flex;
+    justify-content: center;
+}
+
+.settings-back-btn {
+    padding: 12px 32px;
+    font-size: 14px;
+    border-radius: 8px;
+}
+
 /* 保存ボタン追加スタイル */
 .save-actions {
     display: flex;
