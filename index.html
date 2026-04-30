@@ -132,7 +132,7 @@
         </header>
 
         <main class="main-content">
-            <!-- プレイヤー情報セクション -->
+            <!-- プレイヤー情報セクション（常時表示） -->
             <section class="player-info">
                 <h2>プレイヤー情報</h2>
                 <div class="player-details">
@@ -150,6 +150,20 @@
                     </div>
                 </div>
             </section>
+
+            <!-- ナビゲーションバー -->
+            <nav class="game-nav">
+                <button class="nav-btn active" data-screen="home">🏠 HOME</button>
+                <button class="nav-btn" data-screen="training">💪 育成</button>
+                <button class="nav-btn" data-screen="battleStart">⚔️ 試合</button>
+                <button class="nav-btn" data-screen="data">📊 データ</button>
+                <button class="nav-btn" data-screen="settings">⚙️ 設定</button>
+            </nav>
+
+            <!-- ==============================
+                 HOME画面
+                 ============================== -->
+            <div id="screen-home" class="game-screen">
 
             <!-- ステータス表示セクション -->
             <section class="stats-section">
@@ -201,6 +215,36 @@
                     <div class="style-description" id="styleDescription">複数の戦型から一つを選んでください</div>
                 </div>
             </section>
+
+            <!-- HOME画面: メニュー -->
+            <section class="home-menu-section">
+                <h2>🎮 メニュー</h2>
+                <div class="home-menu-grid">
+                    <button class="home-menu-card" data-screen="training">
+                        <span class="home-menu-icon">💪</span>
+                        <span class="home-menu-label">育成</span>
+                    </button>
+                    <button class="home-menu-card" data-screen="battleStart">
+                        <span class="home-menu-icon">⚔️</span>
+                        <span class="home-menu-label">試合</span>
+                    </button>
+                    <button class="home-menu-card" data-screen="data">
+                        <span class="home-menu-icon">📊</span>
+                        <span class="home-menu-label">データ</span>
+                    </button>
+                    <button class="home-menu-card" data-screen="settings">
+                        <span class="home-menu-icon">⚙️</span>
+                        <span class="home-menu-label">設定</span>
+                    </button>
+                </div>
+            </section>
+
+            </div><!-- /#screen-home -->
+
+            <!-- ==============================
+                 育成画面
+                 ============================== -->
+            <div id="screen-training" class="game-screen" style="display:none;">
 
             <!-- 戦型選択セクション -->
             <section class="style-select-section" id="styleSelectSection">
@@ -273,6 +317,13 @@
                     </div>
                 </div>
             </section>
+
+            </div><!-- /#screen-training -->
+
+            <!-- ==============================
+                 試合開始画面
+                 ============================== -->
+            <div id="screen-battleStart" class="game-screen" style="display:none;">
 
             <!-- 自動バトルセクション -->
             <section class="battle-section">
@@ -363,6 +414,39 @@
                 </div>
             </section>
 
+            </div><!-- /#screen-battleStart -->
+
+            <!-- ==============================
+                 試合画面（準備中）
+                 ============================== -->
+            <div id="screen-battle" class="game-screen" style="display:none;">
+                <section class="screen-placeholder-section">
+                    <div class="screen-placeholder">
+                        <div class="placeholder-icon">⚔️</div>
+                        <h2>試合画面</h2>
+                        <p>（準備中）</p>
+                    </div>
+                </section>
+            </div><!-- /#screen-battle -->
+
+            <!-- ==============================
+                 試合終了画面（準備中）
+                 ============================== -->
+            <div id="screen-battleResult" class="game-screen" style="display:none;">
+                <section class="screen-placeholder-section">
+                    <div class="screen-placeholder">
+                        <div class="placeholder-icon">🏁</div>
+                        <h2>試合終了画面</h2>
+                        <p>（準備中）</p>
+                    </div>
+                </section>
+            </div><!-- /#screen-battleResult -->
+
+            <!-- ==============================
+                 データ確認画面
+                 ============================== -->
+            <div id="screen-data" class="game-screen" style="display:none;">
+
             <!-- メッセージログセクション -->
             <section class="log-section">
                 <h2>操作ログ</h2>
@@ -379,10 +463,26 @@
                     <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
                 </div>
             </section>
+
+            </div><!-- /#screen-data -->
+
+            <!-- ==============================
+                 設定画面（準備中）
+                 ============================== -->
+            <div id="screen-settings" class="game-screen" style="display:none;">
+                <section class="screen-placeholder-section">
+                    <div class="screen-placeholder">
+                        <div class="placeholder-icon">⚙️</div>
+                        <h2>設定画面</h2>
+                        <p>（準備中）</p>
+                    </div>
+                </section>
+            </div><!-- /#screen-settings -->
+
         </main>
 
         <footer class="footer">
-            <p>© 2026 TableTennisSkillsBattle | Phase 9</p>
+            <p>© 2026 TableTennisSkillsBattle | Phase 10</p>
         </footer>
     </div>
 

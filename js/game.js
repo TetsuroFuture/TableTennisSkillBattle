@@ -13,6 +13,46 @@ let autoSaveTimerId = null;
 const pendingAutoSaveReasons = new Set();
 let isNewPlayerSetup = false;
 
+// ============================================================
+// 画面状態管理
+// ============================================================
+
+const SCREEN_NAMES = ['home', 'training', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
+let currentScreen = 'home';
+
+function changeScreen(screenName) {
+    if (!SCREEN_NAMES.includes(screenName)) {
+        console.warn('changeScreen: 不明な画面名:', screenName);
+        return;
+    }
+
+    SCREEN_NAMES.forEach(name => {
+        const el = document.getElementById('screen-' + name);
+        if (el) {
+            el.style.display = (name === screenName) ? 'block' : 'none';
+        }
+    });
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.screen === screenName);
+    });
+
+    currentScreen = screenName;
+}
+
+function setupNavButtons() {
+    document.querySelectorAll('.nav-btn, .home-menu-card').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.screen;
+            if (target) {
+                changeScreen(target);
+            }
+        });
+    });
+}
+
+// ============================================================
+
 function updateSaveStatus(message) {
     const statusElement = document.getElementById('saveStatusText');
     if (!statusElement) {
@@ -3026,6 +3066,8 @@ async function initGame() {
     setupLoginOverlay();
     setupChangePasswordModal();
     setupLogoutButton();
+    setupNavButtons();
+    changeScreen('home');
 
     const existingPlayerId = localStorage.getItem(LOCAL_PLAYER_ID_KEY);
     if (existingPlayerId) {
