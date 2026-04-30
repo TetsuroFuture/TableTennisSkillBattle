@@ -1,0 +1,1137 @@
+/* ==========================================================
+    TableTennisSkillsBattle - CSS
+     卓球育成ゲーム Phase9
+    ========================================================== */
+
+/* リセット・基本設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Hiragino Sans', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 10px;
+}
+
+/* コンテナ */
+.container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ヘッダー */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+.header h1 {
+    font-size: 28px;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.subtitle {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* メインコンテンツ */
+.main-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+/* セクション共通スタイル */
+section {
+    margin-bottom: 25px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+section h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+section h3 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #555;
+}
+
+/* プレイヤー情報セクション */
+.player-info {
+    border-left-color: #667eea;
+}
+
+.player-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.label {
+    font-weight: 600;
+    color: #555;
+    font-size: 14px;
+}
+
+.value {
+    color: #667eea;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+/* ステータス表示 */
+.stats-section {
+    border-left-color: #ff6b6b;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 12px;
+}
+
+.stat-box {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+    border: 2px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.stat-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #999;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.stat-bar {
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.stat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b6b, #ffa500);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+/* 戦型表示セクション */
+.style-section {
+    border-left-color: #51cf66;
+}
+
+.current-style {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 2px solid #51cf66;
+}
+
+.style-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.style-description {
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+/* 戦型選択セクション */
+.style-select-section {
+    border-left-color: #4dabf7;
+}
+
+.style-buttons-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.style-category {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.style-category h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.style-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.style-btn {
+    padding: 12px 8px;
+    background: #f0f0f0;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.style-btn:hover {
+    background: #e8f4f8;
+    border-color: #4dabf7;
+}
+
+.style-btn.active {
+    background: #4dabf7;
+    border-color: #4dabf7;
+    color: white;
+    box-shadow: 0 4px 12px rgba(77, 171, 247, 0.3);
+}
+
+/* 育成ボタンセクション */
+.training-section {
+    border-left-color: #ffd43b;
+}
+
+.training-note {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+    padding: 8px;
+    background: #fff9e6;
+    border-radius: 4px;
+    border-left: 3px solid #ffd43b;
+}
+
+.training-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.training-btn {
+    padding: 14px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.training-btn:active {
+    transform: scale(0.98);
+}
+
+.atk-btn {
+    background: linear-gradient(135deg, #ff6b6b, #ff8787);
+}
+
+.atk-btn:hover {
+    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+}
+
+.def-btn {
+    background: linear-gradient(135deg, #4dabf7, #74c0fc);
+}
+
+.def-btn:hover {
+    box-shadow: 0 6px 16px rgba(77, 171, 247, 0.4);
+}
+
+.spd-btn {
+    background: linear-gradient(135deg, #ffd43b, #ffe066);
+}
+
+.spd-btn:hover {
+    box-shadow: 0 6px 16px rgba(255, 212, 59, 0.4);
+}
+
+.tec-btn {
+    background: linear-gradient(135deg, #51cf66, #69db7c);
+}
+
+.tec-btn:hover {
+    box-shadow: 0 6px 16px rgba(81, 207, 102, 0.4);
+}
+
+.sta-btn {
+    background: linear-gradient(135deg, #da77f2, #e599f7);
+}
+
+.sta-btn:hover {
+    box-shadow: 0 6px 16px rgba(218, 119, 242, 0.4);
+}
+
+/* スキル管理セクション */
+.skill-section {
+    border-left-color: #20c997;
+}
+
+.skill-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: #e9fcf5;
+    border-radius: 6px;
+    border: 1px solid #c3fae8;
+}
+
+.skill-debug-row {
+    margin-bottom: 10px;
+}
+
+.debug-skill-btn {
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    background: linear-gradient(135deg, #15aabf, #0ca678);
+}
+
+.debug-skill-btn:hover {
+    box-shadow: 0 6px 16px rgba(12, 166, 120, 0.35);
+}
+
+.skill-columns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.skill-column {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.skill-card {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.skill-card.equipped {
+    border-color: #20c997;
+    background: #f1fdf9;
+}
+
+.skill-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.skill-name {
+    font-weight: 700;
+    color: #212529;
+    font-size: 14px;
+}
+
+.skill-category {
+    font-size: 11px;
+    font-weight: 700;
+    color: #087f5b;
+    background: #d3f9d8;
+    padding: 2px 6px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.skill-description {
+    font-size: 12px;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.skill-meta {
+    font-size: 11px;
+    color: #495057;
+    margin-top: 4px;
+}
+
+.skill-action-btn {
+    width: 100%;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+}
+
+.equip-skill-btn {
+    background: linear-gradient(135deg, #20c997, #12b886);
+}
+
+.equip-skill-btn:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}
+
+.unequip-skill-btn {
+    background: linear-gradient(135deg, #868e96, #495057);
+}
+
+.equipped-label {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0b7285;
+}
+
+.skill-empty {
+    font-size: 12px;
+    color: #868e96;
+    padding: 8px;
+    border: 1px dashed #ced4da;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+/* 自動バトルセクション */
+.battle-section {
+    border-left-color: #ff922b;
+}
+
+.battle-controls {
+    margin-bottom: 12px;
+}
+
+.mode-note {
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #d9480f;
+    background: #fff4e6;
+    border: 1px solid #ffd8a8;
+    border-radius: 6px;
+    padding: 8px 10px;
+}
+
+.mode-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.tournament-btn {
+    background: linear-gradient(135deg, #f59f00, #f76707);
+}
+
+.tactic-box {
+    margin-bottom: 12px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.tactic-box h3 {
+    margin-bottom: 8px;
+}
+
+#tacticSelect {
+    width: 100%;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 13px;
+    margin-bottom: 8px;
+    background: #fff;
+}
+
+#tacticDescription {
+    font-size: 12px;
+    color: #495057;
+}
+
+.rival-box {
+    margin-bottom: 12px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+.rival-note {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.rival-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.rival-card {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    background: #f8f9fa;
+}
+
+.rival-card h4 {
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #343a40;
+}
+
+.rival-style {
+    font-size: 12px;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.rival-description {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 8px;
+}
+
+.rival-battle-btn {
+    width: 100%;
+    border: none;
+    border-radius: 5px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, #4263eb, #364fc7);
+    cursor: pointer;
+}
+
+.battle-controls-note {
+    display: block;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.battle-btn {
+    width: 100%;
+    padding: 14px 10px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #ff922b, #ff6b6b);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 10px rgba(255, 107, 107, 0.25);
+}
+
+.battle-btn:hover {
+    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.35);
+}
+
+.battle-btn:active {
+    transform: scale(0.98);
+}
+
+.battle-summary {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #f1f3f5;
+    padding: 8px 0;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.result-row .value {
+    font-size: 18px;
+}
+
+.result-win {
+    color: #2f9e44;
+}
+
+.result-lose {
+    color: #e03131;
+}
+
+.battle-log {
+    margin-top: 12px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.battle-log-entry {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #495057;
+    border-bottom: 1px solid #f1f3f5;
+    padding: 6px 0;
+}
+
+.battle-log-entry:last-child {
+    border-bottom: none;
+}
+
+/* メッセージログセクション */
+.log-section {
+    border-left-color: #a78bfa;
+}
+
+.save-status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background: #f3f0ff;
+    border-radius: 6px;
+    border: 1px solid #e5dbff;
+}
+
+.save-actions {
+    margin-bottom: 10px;
+}
+
+.save-btn {
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    background: linear-gradient(135deg, #5c7cfa, #364fc7);
+}
+
+.save-btn:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+}
+
+.message-log {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+}
+
+.log-entry {
+    font-size: 13px;
+    color: #555;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    line-height: 1.4;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry.success {
+    color: #51cf66;
+    font-weight: 600;
+}
+
+.log-entry.info {
+    color: #4dabf7;
+}
+
+.log-entry.warning {
+    color: #ffd43b;
+}
+
+/* フッター */
+.footer {
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    color: #999;
+    border-top: 1px solid #e0e0e0;
+}
+
+/* スマートフォン対応 */
+@media (max-width: 480px) {
+    .container {
+        border-radius: 0;
+        min-height: 100vh;
+    }
+
+    .header h1 {
+        font-size: 24px;
+    }
+
+    .main-content {
+        padding: 15px;
+    }
+
+    section {
+        margin-bottom: 20px;
+        padding: 12px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+        gap: 8px;
+    }
+
+    .style-buttons {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .training-buttons {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .training-btn {
+        padding: 12px 8px;
+        font-size: 12px;
+    }
+
+    .mode-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================
+   Phase10 - バトルステージ・キャラクター表示
+   ========================================================== */
+
+/* バトルステージカード */
+.battle-stage-card {
+    margin-top: 14px;
+    overflow: hidden;
+}
+
+.battle-stage-card h3 {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+/* バトルステージ本体 */
+.battle-stage {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    min-height: 220px;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #f7fbff, #e8f5e9);
+    border: 2px solid #cfd8dc;
+}
+
+/* キャラクターエリア */
+.character-area {
+    width: 35%;
+    text-align: center;
+}
+
+.character-area p {
+    font-size: 12px;
+    font-weight: 700;
+    color: #444;
+    margin-top: 6px;
+}
+
+/* ボールエリア */
+.ball-area {
+    position: relative;
+    width: 20%;
+    height: 120px;
+}
+
+/* キャラクター全体 */
+.tt-character {
+    position: relative;
+    width: 80px;
+    height: 120px;
+    margin: 0 auto;
+    transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+/* 頭 */
+.character-head {
+    position: absolute;
+    top: 0;
+    left: 26px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #333;
+}
+
+/* 胴体 */
+.character-body {
+    position: absolute;
+    top: 32px;
+    left: 24px;
+    width: 32px;
+    height: 45px;
+    border-radius: 12px;
+    background: #555;
+}
+
+/* 腕 */
+.character-arm {
+    position: absolute;
+    top: 40px;
+    width: 35px;
+    height: 8px;
+    border-radius: 8px;
+    background: #333;
+}
+
+.racket-arm {
+    right: 4px;
+    transform: rotate(-25deg);
+}
+
+.enemy-character .racket-arm {
+    left: 4px;
+    right: auto;
+    transform: rotate(25deg);
+}
+
+/* ラケット */
+.character-racket {
+    position: absolute;
+    top: 33px;
+    right: -4px;
+    width: 18px;
+    height: 24px;
+    border-radius: 50%;
+    background: #d84315;
+}
+
+.enemy-character .character-racket {
+    left: -4px;
+    right: auto;
+}
+
+/* 足 */
+.character-leg {
+    position: absolute;
+    top: 75px;
+    width: 10px;
+    height: 38px;
+    border-radius: 8px;
+    background: #333;
+}
+
+.left-leg {
+    left: 26px;
+    transform: rotate(10deg);
+}
+
+.right-leg {
+    right: 26px;
+    transform: rotate(-10deg);
+}
+
+/* ボール */
+.battle-ball {
+    position: absolute;
+    top: 55px;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #333;
+    transform: translateX(-50%);
+    transition: transform 0.3s ease;
+}
+
+/* エフェクト */
+.character-effect {
+    position: absolute;
+    inset: -8px;
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    border: 2px solid transparent;
+    transition: opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* アニメーションメッセージ */
+#battle-animation-message {
+    font-size: 12px;
+    color: #7a8a90;
+    text-align: center;
+    margin-top: 8px;
+}
+
+/* ----------------------------------------------------------
+   9タイプ別 見た目
+   ---------------------------------------------------------- */
+
+/* 前陣速攻型 */
+.style-front-fast-attack .character-body {
+    background: #ff7043;
+}
+.style-front-fast-attack {
+    transform: skewX(-5deg);
+}
+
+/* オールフォア型 */
+.style-all-fore .character-body {
+    background: #ef5350;
+}
+.style-all-fore .character-racket {
+    transform: scale(1.15);
+}
+
+/* パワー両ハンド型 */
+.style-power-both-hand .character-body {
+    background: #8d6e63;
+    width: 40px;
+    left: 20px;
+}
+
+/* ブロック＆カウンター型 */
+.style-block-counter .character-body {
+    background: #42a5f5;
+    border-radius: 6px;
+}
+
+/* 一撃カウンター型 */
+.style-one-shot-counter .character-body {
+    background: #5c6bc0;
+}
+.style-one-shot-counter {
+    transform: skewX(6deg);
+}
+
+/* オールラウンド型 */
+.style-all-round .character-body {
+    background: #66bb6a;
+}
+
+/* ペン粒型 */
+.style-pips .character-body {
+    background: #ab47bc;
+}
+.style-pips .character-effect {
+    border-color: #ab47bc;
+    opacity: 0.25;
+}
+
+/* カットマン型 */
+.style-chopper .character-body {
+    background: #26a69a;
+}
+.style-chopper {
+    transform: translateY(8px);
+}
+
+/* 異質攻守型 */
+.style-trickster .character-body {
+    background: linear-gradient(90deg, #ffa726 50%, #7e57c2 50%);
+}
+.style-trickster .character-head {
+    transform: translateX(4px);
+}
+
+/* ----------------------------------------------------------
+   アニメーションクラス
+   ---------------------------------------------------------- */
+
+/* 攻撃 */
+.tt-character.anim-attack {
+    transform: translateX(18px) scale(1.05);
+}
+.enemy-character.anim-attack {
+    transform: translateX(-18px) scale(1.05);
+}
+
+/* 守備 */
+.tt-character.anim-defense {
+    transform: translateX(-12px) scale(0.95);
+}
+.enemy-character.anim-defense {
+    transform: translateX(12px) scale(0.95);
+}
+
+/* カウンター */
+.tt-character.anim-counter {
+    transform: translateX(14px) rotate(-4deg) scale(1.06);
+}
+.enemy-character.anim-counter {
+    transform: translateX(-14px) rotate(4deg) scale(1.06);
+}
+
+/* スキル発動 */
+.tt-character.anim-skill {
+    filter: brightness(1.4);
+}
+.tt-character.anim-skill .character-effect {
+    opacity: 1;
+    border-color: #ffeb3b;
+    box-shadow: 0 0 18px #ffeb3b;
+}
+
+/* 勝利 */
+.tt-character.anim-win {
+    transform: translateY(-18px) scale(1.08);
+}
+
+/* 敗北 */
+.tt-character.anim-lose {
+    transform: translateY(14px) scale(0.92);
+    filter: grayscale(0.4);
+}
+
+/* ボールアニメーション */
+.battle-ball.anim-to-enemy {
+    transform: translateX(70px);
+}
+.battle-ball.anim-to-player {
+    transform: translateX(-70px);
+}
+
+/* バトルステージ レスポンシブ */
+@media (max-width: 600px) {
+    .battle-stage {
+        min-height: 190px;
+        padding: 12px;
+    }
+
+    .tt-character {
+        width: 64px;
+        height: 105px;
+    }
+
+    .character-area {
+        width: 38%;
+    }
+
+    .ball-area {
+        width: 16%;
+    }
+}
+
+/* タブレット対応 */
+@media (min-width: 768px) {
+    .container {
+        max-width: 600px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .training-buttons {
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .style-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-columns {
+        grid-template-columns: 1fr 1fr;
+    }
+}

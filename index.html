@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卓球育成ゲーム TableTennisSkillsBattle</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- タイトル -->
+        <header class="header">
+            <h1>🏓 TableTennisSkillsBattle</h1>
+            <p class="subtitle">卓球育成シミュレーション</p>
+        </header>
+
+        <main class="main-content">
+            <!-- プレイヤー情報セクション -->
+            <section class="player-info">
+                <h2>プレイヤー情報</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">プレイヤー名:</span>
+                        <span class="value" id="playerName">新人選手</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">レベル:</span>
+                        <span class="value" id="playerLevel">Lv 1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">経験値:</span>
+                        <span class="value" id="playerExp">EXP: 0 / 使用可: 0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ステータス表示セクション -->
+            <section class="stats-section">
+                <h2>ステータス</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">ATK</div>
+                        <div class="stat-value" id="statAtk">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="atkBar" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">DEF</div>
+                        <div class="stat-value" id="statDef">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="defBar" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">SPD</div>
+                        <div class="stat-value" id="statSpd">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="spdBar" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">TEC</div>
+                        <div class="stat-value" id="statTec">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="tecBar" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">STA</div>
+                        <div class="stat-value" id="statSta">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="staBar" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 戦型表示セクション -->
+            <section class="style-section">
+                <h2>選択中の戦型</h2>
+                <div class="current-style">
+                    <div class="style-name" id="styleName">戦型を選択してください</div>
+                    <div class="style-description" id="styleDescription">複数の戦型から一つを選んでください</div>
+                </div>
+            </section>
+
+            <!-- 戦型選択セクション -->
+            <section class="style-select-section">
+                <h2>戦型選択</h2>
+                <div class="style-buttons-container">
+                    <div class="style-category">
+                        <h3>攻撃系</h3>
+                        <div class="style-buttons">
+                            <button class="style-btn" data-style="0">前陣速攻型</button>
+                            <button class="style-btn" data-style="1">オールフォア型</button>
+                            <button class="style-btn" data-style="2">パワー両ハンド型</button>
+                        </div>
+                    </div>
+                    <div class="style-category">
+                        <h3>カウンター系</h3>
+                        <div class="style-buttons">
+                            <button class="style-btn" data-style="3">ブロック&カウンター型</button>
+                            <button class="style-btn" data-style="4">一撃カウンター型</button>
+                            <button class="style-btn" data-style="5">オールラウンド型</button>
+                        </div>
+                    </div>
+                    <div class="style-category">
+                        <h3>守備系</h3>
+                        <div class="style-buttons">
+                            <button class="style-btn" data-style="6">ペン粒型</button>
+                            <button class="style-btn" data-style="7">カットマン型</button>
+                            <button class="style-btn" data-style="8">異質攻守型</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 育成ボタンセクション -->
+            <section class="training-section">
+                <h2>ステータス強化（EXP消費）</h2>
+                <p class="training-note">※ バトルで獲得したEXPを消費してステータスを強化します（1強化に10EXP必要）</p>
+                <div class="training-buttons">
+                    <button class="training-btn atk-btn" data-stat="atk">🔥 攻撃力強化</button>
+                    <button class="training-btn def-btn" data-stat="def">🛡️ 守備力強化</button>
+                    <button class="training-btn spd-btn" data-stat="spd">⚡ スピード強化</button>
+                    <button class="training-btn tec-btn" data-stat="tec">🎯 技術強化</button>
+                    <button class="training-btn sta-btn" data-stat="sta">💪 スタミナ強化</button>
+                </div>
+            </section>
+
+            <!-- スキル管理セクション -->
+            <section class="skill-section">
+                <h2>スキルカード</h2>
+                <div class="skill-debug-row">
+                    <button class="debug-skill-btn" id="debugGainSkillButton">ランダムスキル獲得（開発用）</button>
+                </div>
+                <div class="skill-header-row">
+                    <span class="label">装備枠:</span>
+                    <span class="value" id="equipSlotsInfo">装備中 0 / 2</span>
+                </div>
+
+                <div class="skill-columns">
+                    <div class="skill-column">
+                        <h3>所持スキル</h3>
+                        <div class="skill-list" id="ownedSkillList">
+                            <div class="skill-empty">まだスキルカードを持っていません</div>
+                        </div>
+                    </div>
+
+                    <div class="skill-column">
+                        <h3>装備中スキル</h3>
+                        <div class="skill-list" id="equippedSkillList">
+                            <div class="skill-empty">装備中スキルはありません。</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 自動バトルセクション -->
+            <section class="battle-section">
+                <h2>自動バトル</h2>
+                <div class="mode-note" id="currentModeLabel">現在モード: 練習試合</div>
+
+                <div class="mode-buttons">
+                    <button class="battle-btn" id="startBattleBtn">▶ 練習試合開始</button>
+                    <button class="battle-btn tournament-btn" id="startTournamentBtn">🏆 大会モード開始</button>
+                </div>
+
+                <div class="tactic-box">
+                    <h3>試合前作戦</h3>
+                    <select id="tacticSelect"></select>
+                    <p id="tacticDescription">作戦を選択してください。</p>
+                </div>
+
+                <div class="rival-box">
+                    <h3>ライバル戦</h3>
+                    <p class="rival-note">9タイプのライバルから選択して挑戦できます。</p>
+                    <div class="rival-list" id="rivalList"></div>
+                </div>
+
+                <div class="battle-controls">
+                    <span class="battle-controls-note">試合結果は下部に表示されます。</span>
+                </div>
+                <div class="battle-summary" id="battleSummary">
+                    <div class="summary-row">
+                        <span class="label">CPU対戦相手:</span>
+                        <span class="value" id="cpuInfo">未対戦</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">プレイヤー総合力:</span>
+                        <span class="value" id="playerPower">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">CPU総合力:</span>
+                        <span class="value" id="cpuPower">-</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">予測勝率:</span>
+                        <span class="value" id="winRate">-</span>
+                    </div>
+                    <div class="summary-row result-row">
+                        <span class="label">試合結果:</span>
+                        <span class="value" id="battleResult">-</span>
+                    </div>
+                </div>
+                <!-- バトルステージ（Phase10追加） -->
+                <div class="battle-stage-card">
+                    <h3>バトルステージ</h3>
+                    <div id="battle-stage" class="battle-stage">
+                        <div class="character-area player-side">
+                            <div id="player-character" class="tt-character player-character">
+                                <div class="character-effect"></div>
+                                <div class="character-head"></div>
+                                <div class="character-body"></div>
+                                <div class="character-arm racket-arm"></div>
+                                <div class="character-racket"></div>
+                                <div class="character-leg left-leg"></div>
+                                <div class="character-leg right-leg"></div>
+                            </div>
+                            <p id="player-character-label">Player</p>
+                        </div>
+
+                        <div class="ball-area">
+                            <div id="battle-ball" class="battle-ball"></div>
+                        </div>
+
+                        <div class="character-area enemy-side">
+                            <div id="enemy-character" class="tt-character enemy-character">
+                                <div class="character-effect"></div>
+                                <div class="character-head"></div>
+                                <div class="character-body"></div>
+                                <div class="character-arm racket-arm"></div>
+                                <div class="character-racket"></div>
+                                <div class="character-leg left-leg"></div>
+                                <div class="character-leg right-leg"></div>
+                            </div>
+                            <p id="enemy-character-label">CPU</p>
+                        </div>
+                    </div>
+                    <p id="battle-animation-message">試合を開始するとキャラクターが動きます。</p>
+                </div>
+
+                <div class="battle-log" id="battleLog">
+                    <div class="battle-log-entry">自動バトルを開始すると、ここに 5〜10 行の試合ログが表示されます。</div>
+                </div>
+            </section>
+
+            <!-- メッセージログセクション -->
+            <section class="log-section">
+                <h2>操作ログ</h2>
+                <div class="save-status-row">
+                    <span class="label">保存状態:</span>
+                    <span class="value" id="saveStatusText">未初期化</span>
+                </div>
+                <div class="save-actions">
+                    <button class="save-btn" id="manualSaveBtn">💾 手動保存</button>
+                </div>
+                <div class="message-log" id="messageLog">
+                    <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>© 2026 TableTennisSkillsBattle | Phase 9</p>
+        </footer>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebaseConfig.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
