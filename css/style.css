@@ -1361,3 +1361,206 @@ section h3 {
     opacity: 0.55;
     cursor: not-allowed;
 }
+
+/* ==========================================================
+   v0.12 - ログイン・パスワード機能
+   ========================================================== */
+
+/* ログイン / パスワード変更オーバーレイ */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.login-modal {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+    margin: auto;
+}
+
+.login-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px 20px;
+    text-align: center;
+}
+
+.login-header h2 {
+    font-size: 22px;
+    margin-bottom: 6px;
+}
+
+.login-subtitle {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.login-screen-inner {
+    padding: 24px 20px;
+}
+
+.login-choice-title,
+.login-form-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #444;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* ログインボタン群 */
+.login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: box-shadow 0.25s ease;
+    margin-bottom: 12px;
+    color: white;
+    box-sizing: border-box;
+}
+
+.login-btn:last-child {
+    margin-bottom: 0;
+}
+
+.login-btn-new {
+    background: linear-gradient(135deg, #51cf66, #2f9e44);
+    box-shadow: 0 4px 12px rgba(81, 207, 102, 0.3);
+}
+
+.login-btn-new:hover {
+    box-shadow: 0 6px 18px rgba(81, 207, 102, 0.45);
+}
+
+.login-btn-continue {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.login-btn-continue:hover {
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.45);
+}
+
+.login-btn-submit {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+}
+
+.login-btn-submit:hover:not(:disabled) {
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.login-btn-submit:disabled {
+    background: #adb5bd;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.login-btn-back {
+    background: #868e96;
+    box-shadow: none;
+}
+
+.login-btn-back:hover {
+    background: #6c757d;
+}
+
+.login-btn-icon {
+    font-size: 18px;
+}
+
+.login-btn-text {
+    flex: 1;
+    text-align: left;
+}
+
+/* フォーム */
+.login-form-group {
+    margin-bottom: 16px;
+}
+
+.login-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+/* エラー・成功メッセージ */
+.login-error {
+    font-size: 13px;
+    color: #e03131;
+    font-weight: 600;
+    background: #fff5f5;
+    border: 1px solid #ffc9c9;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.login-success {
+    font-size: 13px;
+    color: #2f9e44;
+    font-weight: 600;
+    background: #ebfbee;
+    border: 1px solid #b2f2bb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+/* 保存ボタン追加スタイル */
+.save-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.save-btn-secondary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.save-btn-danger {
+    background: linear-gradient(135deg, #ff6b6b, #e03131);
+}
+

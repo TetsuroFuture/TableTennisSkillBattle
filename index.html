@@ -7,6 +7,79 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- ログインオーバーレイ -->
+    <div id="loginOverlay" class="login-overlay" style="display:none;">
+        <div class="login-modal">
+            <div class="login-header">
+                <h2>🏓 TableTennisSkillsBattle</h2>
+                <p class="login-subtitle">卓球育成シミュレーション</p>
+            </div>
+
+            <!-- 選択画面 -->
+            <div id="loginChoiceScreen" class="login-screen-inner">
+                <p class="login-choice-title">プレイ方法を選んでください</p>
+                <button class="login-btn login-btn-new" id="loginNewPlayerBtn">
+                    <span class="login-btn-icon">🆕</span>
+                    <span class="login-btn-text">新しい選手を作る</span>
+                </button>
+                <button class="login-btn login-btn-continue" id="loginContinueBtn">
+                    <span class="login-btn-icon">🔓</span>
+                    <span class="login-btn-text">前に作った選手の続き</span>
+                </button>
+                <p class="login-error" id="loginChoiceError" style="display:none;"></p>
+            </div>
+
+            <!-- ログインフォーム -->
+            <div id="loginFormScreen" class="login-screen-inner" style="display:none;">
+                <p class="login-form-title">選手名とパスワードを入力</p>
+                <div class="login-form-group">
+                    <label class="login-label">選手名</label>
+                    <input type="text" id="loginNameInput" class="login-input"
+                           placeholder="例: 山田太郎" maxlength="20">
+                </div>
+                <div class="login-form-group">
+                    <label class="login-label">パスワード（数字4桁）</label>
+                    <input type="password" id="loginPasswordInput" class="login-input"
+                           placeholder="0000" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                </div>
+                <p class="login-error" id="loginError" style="display:none;"></p>
+                <button class="login-btn login-btn-submit" id="loginSubmitBtn">ログイン</button>
+                <button class="login-btn login-btn-back" id="loginBackBtn">← 戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- パスワード変更モーダル -->
+    <div id="changePasswordModal" class="login-overlay" style="display:none;">
+        <div class="login-modal">
+            <div class="login-header">
+                <h2>🔑 パスワード変更</h2>
+                <p class="login-subtitle">現在のパスワードと新しいパスワードを入力</p>
+            </div>
+            <div class="login-screen-inner">
+                <div class="login-form-group">
+                    <label class="login-label">現在のパスワード（4桁）</label>
+                    <input type="password" id="currentPasswordInput" class="login-input"
+                           placeholder="0000" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                </div>
+                <div class="login-form-group">
+                    <label class="login-label">新しいパスワード（4桁）</label>
+                    <input type="password" id="newPasswordInput" class="login-input"
+                           placeholder="0000" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                </div>
+                <div class="login-form-group">
+                    <label class="login-label">新しいパスワード（確認）</label>
+                    <input type="password" id="newPasswordConfirmInput" class="login-input"
+                           placeholder="0000" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                </div>
+                <p class="login-error" id="changePasswordError" style="display:none;"></p>
+                <p class="login-success" id="changePasswordSuccess" style="display:none;"></p>
+                <button class="login-btn login-btn-submit" id="changePasswordSubmitBtn">変更する</button>
+                <button class="login-btn login-btn-back" id="closeChangePasswordBtn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 初回セットアップオーバーレイ -->
     <div id="setupOverlay" class="setup-overlay" style="display:none;">
         <div class="setup-modal">
@@ -17,7 +90,7 @@
 
             <!-- STEP 1: 選手名入力 -->
             <div class="setup-step" id="setupStep1">
-                <p class="setup-step-label">STEP 1 / 2 &mdash; 選手名入力</p>
+                <p class="setup-step-label" id="setupStep1Label">STEP 1 / 2 &mdash; 選手名入力</p>
                 <input type="text" id="setupNameInput" class="setup-name-input"
                        placeholder="選手名を入力（例: 山田太郎）" maxlength="20">
                 <p class="setup-name-error" id="setupNameError" style="display:none;">選手名を入力してください</p>
@@ -27,13 +100,26 @@
 
             <!-- STEP 2: 戦型選択 -->
             <div class="setup-step" id="setupStep2" style="display:none;">
-                <p class="setup-step-label">STEP 2 / 2 &mdash; 戦型選択</p>
+                <p class="setup-step-label" id="setupStep2Label">STEP 2 / 2 &mdash; 戦型選択</p>
                 <p class="setup-note">※ 戦型は後から変更できません。慎重に選んでください。</p>
                 <div id="setupStyleList" class="setup-style-list"></div>
                 <div class="setup-selected-info" id="setupSelectedStyleInfo">
                     <p>戦型を選択してください</p>
                 </div>
                 <button class="setup-btn-confirm" id="setupConfirmBtn" disabled>この設定で始める ✓</button>
+            </div>
+
+            <!-- STEP 3: パスワード設定 -->
+            <div class="setup-step" id="setupStep3" style="display:none;">
+                <p class="setup-step-label" id="setupStep3Label">STEP 3 / 3 &mdash; パスワード設定</p>
+                <p class="setup-note">次回ログイン時に使用するパスワードを設定してください（数字4桁）。</p>
+                <input type="password" id="setupPasswordInput" class="setup-name-input"
+                       placeholder="パスワード（数字4桁）" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                <p class="setup-name-error" id="setupPasswordError" style="display:none;">パスワードは4桁の数字で入力してください</p>
+                <input type="password" id="setupPasswordConfirmInput" class="setup-name-input"
+                       placeholder="パスワード確認（数字4桁）" maxlength="4" pattern="[0-9]*" inputmode="numeric">
+                <p class="setup-name-error" id="setupPasswordConfirmError" style="display:none;">パスワードが一致しません</p>
+                <button class="setup-btn-confirm" id="setupStep3ConfirmBtn">登録して始める ✓</button>
             </div>
         </div>
     </div>
@@ -286,6 +372,8 @@
                 </div>
                 <div class="save-actions">
                     <button class="save-btn" id="manualSaveBtn">💾 手動保存</button>
+                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">🔑 パスワード変更</button>
+                    <button class="save-btn save-btn-danger" id="logoutBtn">🚪 ログアウト</button>
                 </div>
                 <div class="message-log" id="messageLog">
                     <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
