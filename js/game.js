@@ -11,6 +11,7 @@ let isFirebaseReady = false;
 let currentPlayerId = null;
 let autoSaveTimerId = null;
 const pendingAutoSaveReasons = new Set();
+let isNewPlayerSetup = false;
 
 function updateSaveStatus(message) {
     const statusElement = document.getElementById('saveStatusText');
@@ -66,6 +67,14 @@ function getOrCreatePlayerId() {
     }
 
     return playerId;
+}
+
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(String(password));
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function createDefaultPlayer(playerId) {
@@ -2377,6 +2386,24 @@ function showSetupOverlay() {
     if (overlay) {
         overlay.style.display = 'flex';
     }
+    updateSetupLabels();
+}
+
+function updateSetupLabels() {
+    const totalSteps = (isNewPlayerSetup && isFirebaseReady) ? 3 : 2;
+    const step1Label = document.getElementById('setupStep1Label');
+    const step2Label = document.getElementById('setupStep2Label');
+    const confirmBtn = document.getElementById('setupConfirmBtn');
+
+    if (step1Label) {
+        step1Label.textContent = `STEP 1 / ${totalSteps} \u2014 選手名入力`;
+    }
+    if (step2Label) {
+        step2Label.textContent = `STEP 2 / ${totalSteps} \u2014 戦型選択`;
+    }
+    if (confirmBtn) {
+        confirmBtn.textContent = (isNewPlayerSetup && isFirebaseReady) ? '次へ →' : 'この設定で始める ✓';
+    }
 }
 
 function hideSetupOverlay() {
@@ -2496,7 +2523,479 @@ function setupInitialSetupOverlay() {
         if (!setupPlayerName || setupSelectedStyleIndex === null) {
             return;
         }
-        completeInitialSetup(setupPlayerName, setupSelectedStyleIndex);
+        if (isNewPlayerSetup && isFirebaseReady) {
+            step2.style.display = 'none';
+            const step3 = document.getElementById('setupStep3');
+            if (step3) {
+                step3.style.display = 'block';
+            }
+        } else {
+            completeInitialSetup(setupPlayerName, setupSelectedStyleIndex);
+        }
+    });
+
+    const step3ConfirmBtn = document.getElementById('setupStep3ConfirmBtn');
+    if (step3ConfirmBtn) {
+        step3ConfirmBtn.addEventListener('click', async function() {
+            const pwInput = document.getElementById('setupPasswordInput');
+            const pwConfirmInput = document.getElementById('setupPasswordConfirmInput');
+            const pwError = document.getElementById('setupPasswordError');
+            const pwConfirmError = document.getElementById('setupPasswordConfirmError');
+
+            const pw = pwInput ? pwInput.value.trim() : '';
+            const pwConfirm = pwConfirmInput ? pwConfirmInput.value.trim() : '';
+
+            let valid = true;
+            if (!/^\d{4}$/.test(pw)) {
+                if (pwError) {
+                    pwError.textContent = 'パスワードは4桁の数字で入力してください';
+                    pwError.style.display = 'block';
+                }
+                valid = false;
+            } else {
+                if (pwError) {
+                    pwError.style.display = 'none';
+                }
+            }
+
+            if (pw !== pwConfirm) {
+                if (pwConfirmError) {
+                    pwConfirmError.style.display = 'block';
+                }
+                valid = false;
+            } else {
+                if (pwConfirmError) {
+                    pwConfirmError.style.display = 'none';
+                }
+            }
+
+            if (!valid) {
+                return;
+            }
+
+            step3ConfirmBtn.disabled = true;
+            step3ConfirmBtn.textContent = '登録中...';
+            await completeInitialSetupWithPassword(setupPlayerName, setupSelectedStyleIndex, pw);
+            step3ConfirmBtn.disabled = false;
+            step3ConfirmBtn.textContent = '登録して始める ✓';
+        });
+
+        const pwInput = document.getElementById('setupPasswordInput');
+        const pwConfirmInput = document.getElementById('setupPasswordConfirmInput');
+        if (pwInput) {
+            pwInput.addEventListener('input', function() {
+                const pwError = document.getElementById('setupPasswordError');
+                if (pwError) {
+                    pwError.style.display = 'none';
+                }
+            });
+        }
+        if (pwConfirmInput) {
+            pwConfirmInput.addEventListener('input', function() {
+                const pwConfirmError = document.getElementById('setupPasswordConfirmError');
+                if (pwConfirmError) {
+                    pwConfirmError.style.display = 'none';
+                }
+            });
+        }
+    }
+}
+
+// ============================================================
+// v0.12 ログイン・パスワード機能
+// ============================================================
+
+async function completeInitialSetupWithPassword(name, styleIndex, password) {
+    player.name = name;
+    player.style = styleIndex;
+    player.initialSetupCompleted = true;
+
+    localStorage.setItem(LOCAL_SETUP_COMPLETE_KEY, '1');
+
+    hideSetupOverlay();
+    renderAll();
+
+    addLog(`選手名「${name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
+    autoSavePlayer('initial_setup');
+
+    if (password && isFirebaseReady && db && currentPlayerId) {
+        try {
+            const hash = await hashPassword(password);
+            await db.collection('players').doc(currentPlayerId).set({ passwordHash: hash }, { merge: true });
+            addLog('パスワードを設定しました。次回は「前に作った選手の続き」でログインできます。', 'success');
+        } catch (error) {
+            console.error('Failed to save password', error);
+            addLog('パスワードの保存に失敗しました。後でパスワード変更から再設定してください。', 'warning');
+        }
+    }
+}
+
+async function findPlayerByName(name) {
+    if (!isFirebaseReady || !db) {
+        return null;
+    }
+    try {
+        const snapshot = await db.collection('players').where('name', '==', name).get();
+        if (snapshot.empty) {
+            return null;
+        }
+        return snapshot.docs[0];
+    } catch (error) {
+        console.error('Failed to find player by name', error);
+        return null;
+    }
+}
+
+async function loginWithNameAndPassword(name, password) {
+    if (!isFirebaseReady || !db) {
+        return { success: false, error: 'Firebase未接続です。オンライン環境が必要です。' };
+    }
+    try {
+        const doc = await findPlayerByName(name);
+        if (!doc) {
+            return { success: false, error: '選手が見つかりません。選手名を確認してください。' };
+        }
+
+        const data = doc.data();
+        const hasPassword = !!data.passwordHash;
+
+        if (hasPassword) {
+            const inputHash = await hashPassword(password);
+            if (inputHash !== data.passwordHash) {
+                return { success: false, error: 'パスワードが間違っています。' };
+            }
+        }
+
+        currentPlayerId = doc.id;
+        localStorage.setItem(LOCAL_PLAYER_ID_KEY, currentPlayerId);
+        const loaded = normalizePlayerData(data, currentPlayerId);
+        applyPlayerDataToRuntime(loaded);
+        updateSaveStatus('データ読込完了');
+        return { success: true, hasPassword };
+    } catch (error) {
+        console.error('Login failed', error);
+        return { success: false, error: 'ログインに失敗しました。しばらく待ってから再試行してください。' };
+    }
+}
+
+function showLoginOverlay() {
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+    }
+}
+
+function hideLoginOverlay() {
+    const overlay = document.getElementById('loginOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+function setupLoginOverlay() {
+    const btnNewPlayer = document.getElementById('loginNewPlayerBtn');
+    const btnContinue = document.getElementById('loginContinueBtn');
+    const loginBackBtn = document.getElementById('loginBackBtn');
+    const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+    const loginFormScreen = document.getElementById('loginFormScreen');
+    const loginChoiceScreen = document.getElementById('loginChoiceScreen');
+
+    if (!btnNewPlayer || !btnContinue) {
+        return;
+    }
+
+    btnNewPlayer.addEventListener('click', async function() {
+        isNewPlayerSetup = true;
+        hideLoginOverlay();
+        await loadOrCreatePlayerData();
+        renderAll();
+        showSetupOverlay();
+        addLog('新しい選手を作成します。選手名と戦型を設定してください。', 'info');
+    });
+
+    btnContinue.addEventListener('click', function() {
+        const choiceErrorEl = document.getElementById('loginChoiceError');
+        if (!isFirebaseReady || !db) {
+            if (choiceErrorEl) {
+                choiceErrorEl.textContent = 'Firebase未接続です。オンライン環境でのみ利用できます。';
+                choiceErrorEl.style.display = 'block';
+            }
+            return;
+        }
+        if (choiceErrorEl) {
+            choiceErrorEl.style.display = 'none';
+        }
+        if (loginChoiceScreen) {
+            loginChoiceScreen.style.display = 'none';
+        }
+        if (loginFormScreen) {
+            loginFormScreen.style.display = 'block';
+        }
+    });
+
+    if (loginBackBtn) {
+        loginBackBtn.addEventListener('click', function() {
+            if (loginFormScreen) {
+                loginFormScreen.style.display = 'none';
+            }
+            if (loginChoiceScreen) {
+                loginChoiceScreen.style.display = 'block';
+            }
+            const errorEl = document.getElementById('loginError');
+            if (errorEl) {
+                errorEl.style.display = 'none';
+            }
+            const nameInput = document.getElementById('loginNameInput');
+            const passInput = document.getElementById('loginPasswordInput');
+            if (nameInput) {
+                nameInput.value = '';
+            }
+            if (passInput) {
+                passInput.value = '';
+            }
+        });
+    }
+
+    if (loginSubmitBtn) {
+        loginSubmitBtn.addEventListener('click', handleLoginSubmit);
+    }
+
+    const loginPasswordInput = document.getElementById('loginPasswordInput');
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                handleLoginSubmit();
+            }
+        });
+    }
+
+    const loginNameInput = document.getElementById('loginNameInput');
+    if (loginNameInput) {
+        loginNameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const passInput = document.getElementById('loginPasswordInput');
+                if (passInput) {
+                    passInput.focus();
+                }
+            }
+        });
+    }
+}
+
+async function handleLoginSubmit() {
+    const nameInput = document.getElementById('loginNameInput');
+    const passInput = document.getElementById('loginPasswordInput');
+    const errorEl = document.getElementById('loginError');
+    const submitBtn = document.getElementById('loginSubmitBtn');
+
+    const name = nameInput ? nameInput.value.trim() : '';
+    const password = passInput ? passInput.value.trim() : '';
+
+    if (!name) {
+        if (errorEl) {
+            errorEl.textContent = '選手名を入力してください。';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+
+    if (!/^\d{4}$/.test(password)) {
+        if (errorEl) {
+            errorEl.textContent = 'パスワードは4桁の数字で入力してください。';
+            errorEl.style.display = 'block';
+        }
+        return;
+    }
+
+    if (errorEl) {
+        errorEl.style.display = 'none';
+    }
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'ログイン中...';
+    }
+
+    const result = await loginWithNameAndPassword(name, password);
+
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'ログイン';
+    }
+
+    if (result.success) {
+        hideLoginOverlay();
+        renderAll();
+        if (isFirebaseReady) {
+            updateSaveStatus('待機中');
+        }
+        if (!result.hasPassword) {
+            addLog(`「${name}」でログインしました。パスワードが未設定です。パスワード変更から設定してください。`, 'warning');
+        } else {
+            addLog(`「${name}」でログインしました！`, 'success');
+        }
+    } else {
+        if (errorEl) {
+            errorEl.textContent = result.error;
+            errorEl.style.display = 'block';
+        }
+    }
+}
+
+async function changePassword(currentPassword, newPassword) {
+    if (!isFirebaseReady || !db || !currentPlayerId) {
+        return { success: false, error: 'Firebase未接続です。' };
+    }
+    try {
+        const docRef = db.collection('players').doc(currentPlayerId);
+        const snapshot = await docRef.get();
+        if (!snapshot.exists) {
+            return { success: false, error: 'プレイヤーデータが見つかりません。' };
+        }
+        const data = snapshot.data();
+        if (data.passwordHash) {
+            const currentHash = await hashPassword(currentPassword);
+            if (currentHash !== data.passwordHash) {
+                return { success: false, error: '現在のパスワードが間違っています。' };
+            }
+        }
+        const newHash = await hashPassword(newPassword);
+        await docRef.set({ passwordHash: newHash }, { merge: true });
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to change password', error);
+        return { success: false, error: 'パスワードの変更に失敗しました。' };
+    }
+}
+
+function clearChangePasswordForm() {
+    ['currentPasswordInput', 'newPasswordInput', 'newPasswordConfirmInput'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = '';
+        }
+    });
+    const errEl = document.getElementById('changePasswordError');
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+    }
+    const successEl = document.getElementById('changePasswordSuccess');
+    if (successEl) {
+        successEl.textContent = '';
+        successEl.style.display = 'none';
+    }
+}
+
+async function handleChangePassword() {
+    const currentPw = (document.getElementById('currentPasswordInput') || {}).value || '';
+    const newPw = (document.getElementById('newPasswordInput') || {}).value || '';
+    const newPwConfirm = (document.getElementById('newPasswordConfirmInput') || {}).value || '';
+    const errEl = document.getElementById('changePasswordError');
+    const successEl = document.getElementById('changePasswordSuccess');
+    const changeBtn = document.getElementById('changePasswordSubmitBtn');
+
+    const showError = (msg) => {
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.style.display = 'block';
+        }
+        if (successEl) {
+            successEl.style.display = 'none';
+        }
+    };
+
+    if (!/^\d{4}$/.test(newPw)) {
+        showError('新しいパスワードは4桁の数字で入力してください。');
+        return;
+    }
+
+    if (newPw !== newPwConfirm) {
+        showError('パスワードが一致しません。');
+        return;
+    }
+
+    if (changeBtn) {
+        changeBtn.disabled = true;
+        changeBtn.textContent = '変更中...';
+    }
+
+    const result = await changePassword(currentPw.trim(), newPw.trim());
+
+    if (changeBtn) {
+        changeBtn.disabled = false;
+        changeBtn.textContent = '変更する';
+    }
+
+    if (result.success) {
+        if (errEl) {
+            errEl.style.display = 'none';
+        }
+        if (successEl) {
+            successEl.textContent = 'パスワードを変更しました。';
+            successEl.style.display = 'block';
+        }
+        addLog('パスワードを変更しました。', 'success');
+        setTimeout(() => {
+            const modal = document.getElementById('changePasswordModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            clearChangePasswordForm();
+        }, 2000);
+    } else {
+        showError(result.error);
+    }
+}
+
+function setupChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    const openBtn = document.getElementById('openChangePasswordBtn');
+    const closeBtn = document.getElementById('closeChangePasswordBtn');
+    const changeBtn = document.getElementById('changePasswordSubmitBtn');
+
+    if (openBtn) {
+        openBtn.addEventListener('click', function() {
+            if (!isFirebaseReady || !db) {
+                addLog('Firebase未接続のためパスワード変更はできません。', 'warning');
+                return;
+            }
+            if (!currentPlayerId) {
+                addLog('プレイヤーデータが読み込まれていません。', 'warning');
+                return;
+            }
+            clearChangePasswordForm();
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            clearChangePasswordForm();
+        });
+    }
+
+    if (changeBtn) {
+        changeBtn.addEventListener('click', handleChangePassword);
+    }
+}
+
+function setupLogoutButton() {
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (!logoutBtn) {
+        return;
+    }
+    logoutBtn.addEventListener('click', function() {
+        if (!confirm('ログアウトしますか？\nログアウトするとログイン画面に戻ります。')) {
+            return;
+        }
+        localStorage.removeItem(LOCAL_PLAYER_ID_KEY);
+        localStorage.removeItem(LOCAL_SETUP_COMPLETE_KEY);
+        location.reload();
     });
 }
 
@@ -2512,8 +3011,6 @@ async function initGame() {
     ensurePlayerEquippedSkills(player);
     cleanupEquippedSkills(player);
 
-    await loadOrCreatePlayerData();
-
     renderAll();
 
     setupStyleButtons();
@@ -2526,16 +3023,27 @@ async function initGame() {
     setupDebugSkillButton();
     setupManualSaveButton();
     setupInitialSetupOverlay();
+    setupLoginOverlay();
+    setupChangePasswordModal();
+    setupLogoutButton();
 
-    if (!isSetupComplete()) {
-        showSetupOverlay();
+    const existingPlayerId = localStorage.getItem(LOCAL_PLAYER_ID_KEY);
+    if (existingPlayerId) {
+        await loadOrCreatePlayerData();
+        renderAll();
+
+        if (!isSetupComplete()) {
+            showSetupOverlay();
+        }
+
+        if (isFirebaseReady) {
+            updateSaveStatus('待機中');
+        }
+
+        addLog('ゲーム開始！戦型を選択して育成を開始してください。', 'info');
+    } else {
+        showLoginOverlay();
     }
-
-    if (isFirebaseReady) {
-        updateSaveStatus('待機中');
-    }
-
-    addLog('ゲーム開始！戦型を選択して育成を開始してください。', 'info');
 }
 
 window.addEventListener('DOMContentLoaded', initGame);
