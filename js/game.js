@@ -138,14 +138,17 @@ function setupBattleModeSelectButtons() {
 // ============================================================
 
 const RATED_PROVISIONAL_THRESHOLD = 50;
+const MAX_PROVISIONAL_PENALTY = 500;
 let selectedRatedOpponent = null;
 
+function calculateProvisionalPenalty(ratedMatches) {
+    const matches = Math.min(ratedMatches, RATED_PROVISIONAL_THRESHOLD);
+    const remainingRatio = (RATED_PROVISIONAL_THRESHOLD - matches) / RATED_PROVISIONAL_THRESHOLD;
+    return Math.round(MAX_PROVISIONAL_PENALTY * remainingRatio * remainingRatio);
+}
+
 function calculateEffectiveRate(rate, ratedMatches) {
-    if (ratedMatches >= RATED_PROVISIONAL_THRESHOLD) {
-        return rate;
-    }
-    const t = ratedMatches / RATED_PROVISIONAL_THRESHOLD;
-    return Math.round(1500 + (rate - 1500) * t);
+    return rate - calculateProvisionalPenalty(ratedMatches);
 }
 
 function calculateRateChange(myRate, opponentRate, ratedMatches, isWin) {
