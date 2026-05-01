@@ -447,22 +447,114 @@
                  ============================== -->
             <div id="screen-data" class="game-screen" style="display:none;">
 
-            <!-- メッセージログセクション -->
-            <section class="log-section">
-                <h2>操作ログ</h2>
-                <div class="save-status-row">
-                    <span class="label">保存状態:</span>
-                    <span class="value" id="saveStatusText">未初期化</span>
-                </div>
-                <div class="save-actions">
-                    <button class="save-btn" id="manualSaveBtn">💾 手動保存</button>
-                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">🔑 パスワード変更</button>
-                    <button class="save-btn save-btn-danger" id="logoutBtn">🚪 ログアウト</button>
-                </div>
-                <div class="message-log" id="messageLog">
-                    <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
+            <!-- プレイヤー基本情報セクション -->
+            <section class="player-info data-player-section">
+                <h2>👤 プレイヤー情報</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">選手名:</span>
+                        <span class="value" id="dataPlayerName">新人選手</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">戦型:</span>
+                        <span class="value" id="dataStyleName">未選択</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">レベル:</span>
+                        <span class="value" id="dataPlayerLevel">Lv 1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">経験値:</span>
+                        <span class="value" id="dataPlayerExp">EXP: 0</span>
+                    </div>
                 </div>
             </section>
+
+            <!-- ステータスセクション -->
+            <section class="stats-section data-stats-section">
+                <h2>📊 ステータス</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">ATK</div>
+                        <div class="stat-value" id="dataStatAtk">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="dataAtkBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">DEF</div>
+                        <div class="stat-value" id="dataStatDef">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="dataDefBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">SPD</div>
+                        <div class="stat-value" id="dataStatSpd">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="dataSpdBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">TEC</div>
+                        <div class="stat-value" id="dataStatTec">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="dataTecBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">STA</div>
+                        <div class="stat-value" id="dataStatSta">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="dataStaBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 戦績セクション -->
+            <section class="data-records-section">
+                <h2>🏆 戦績</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">試合数:</span>
+                        <span class="value" id="dataMatches">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">勝利数:</span>
+                        <span class="value" id="dataWins">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">敗北数:</span>
+                        <span class="value" id="dataLosses">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">勝率:</span>
+                        <span class="value" id="dataWinRate">-</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 所持スキルセクション -->
+            <section class="data-skills-section">
+                <h2>🃏 所持スキル</h2>
+                <div class="skill-list" id="dataOwnedSkillList">
+                    <div class="skill-empty">まだスキルカードを持っていません</div>
+                </div>
+            </section>
+
+            <!-- 装備中スキルセクション -->
+            <section class="data-equipped-section">
+                <h2>⚡ 装備中スキル</h2>
+                <div class="skill-list" id="dataEquippedSkillList">
+                    <div class="skill-empty">装備中スキルはありません。</div>
+                </div>
+            </section>
+
+            <!-- HOMEへ戻るボタン -->
+            <div class="settings-back-row">
+                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+            </div>
 
             </div><!-- /#screen-data -->
 
@@ -492,8 +584,21 @@
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">保存状態:</span>
-                        <span class="value" id="settingsSaveStatus">確認中...</span>
+                        <span class="value" id="saveStatusText">未初期化</span>
                     </div>
+                </div>
+                <div class="save-actions">
+                    <button class="save-btn" id="manualSaveBtn">💾 手動保存</button>
+                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">🔑 パスワード変更</button>
+                    <button class="save-btn save-btn-danger" id="logoutBtn">🚪 ログアウト</button>
+                </div>
+            </section>
+
+            <!-- 操作ログセクション -->
+            <section class="log-section">
+                <h2>📋 操作ログ</h2>
+                <div class="message-log" id="messageLog">
+                    <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
                 </div>
             </section>
 

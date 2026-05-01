@@ -59,11 +59,6 @@ function updateSaveStatus(message) {
         return;
     }
     statusElement.textContent = message;
-
-    const settingsSaveStatusEl = document.getElementById('settingsSaveStatus');
-    if (settingsSaveStatusEl) {
-        settingsSaveStatusEl.textContent = message;
-    }
 }
 
 function setManualSaveButtonEnabled(enabled) {
@@ -1779,6 +1774,112 @@ function playBattleLogAnimation(logs, result) {
     setTimeout(playNext, 0);
 }
 
+function renderDataScreen() {
+    const dataPlayerName = document.getElementById('dataPlayerName');
+    if (dataPlayerName) {
+        dataPlayerName.textContent = player.name;
+    }
+
+    const dataStyleName = document.getElementById('dataStyleName');
+    if (dataStyleName) {
+        dataStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    }
+
+    const dataPlayerLevel = document.getElementById('dataPlayerLevel');
+    if (dataPlayerLevel) {
+        dataPlayerLevel.textContent = `Lv ${player.level}`;
+    }
+
+    const dataPlayerExp = document.getElementById('dataPlayerExp');
+    if (dataPlayerExp) {
+        dataPlayerExp.textContent = `${player.exp} (使用可: ${player.usableExp})`;
+    }
+
+    const maxStat = 50;
+    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
+    statKeys.forEach(label => {
+        const key = label.toLowerCase();
+        const valEl = document.getElementById(`dataStat${label}`);
+        if (valEl) {
+            valEl.textContent = player[key];
+        }
+        const barEl = document.getElementById(`data${label}Bar`);
+        if (barEl) {
+            barEl.style.width = (player[key] / maxStat * 100) + '%';
+        }
+    });
+
+    const totalMatches = (player.wins || 0) + (player.losses || 0);
+    const dataMatches = document.getElementById('dataMatches');
+    if (dataMatches) {
+        dataMatches.textContent = totalMatches;
+    }
+
+    const dataWins = document.getElementById('dataWins');
+    if (dataWins) {
+        dataWins.textContent = player.wins || 0;
+    }
+
+    const dataLosses = document.getElementById('dataLosses');
+    if (dataLosses) {
+        dataLosses.textContent = player.losses || 0;
+    }
+
+    const dataWinRate = document.getElementById('dataWinRate');
+    if (dataWinRate) {
+        if (totalMatches > 0) {
+            const rate = Math.round((player.wins || 0) / totalMatches * 100);
+            dataWinRate.textContent = `${rate}%`;
+        } else {
+            dataWinRate.textContent = '-';
+        }
+    }
+
+    const dataOwnedSkillList = document.getElementById('dataOwnedSkillList');
+    if (dataOwnedSkillList) {
+        const ownedSkills = getOwnedSkills(player);
+        if (ownedSkills.length === 0) {
+            dataOwnedSkillList.innerHTML = '<div class="skill-empty">まだスキルカードを持っていません</div>';
+        } else {
+            dataOwnedSkillList.innerHTML = ownedSkills
+                .map(skill => {
+                    const equipped = isSkillEquipped(player, skill.id);
+                    return `
+                        <div class="skill-card ${equipped ? 'equipped' : ''}">
+                            <div class="skill-title-row">
+                                <span class="skill-name">${skill.name}</span>
+                                <span class="skill-category">${skill.category}</span>
+                            </div>
+                            <div class="skill-description">${skill.description}</div>
+                            ${equipped ? '<div class="equipped-label">装備中</div>' : ''}
+                        </div>
+                    `;
+                })
+                .join('');
+        }
+    }
+
+    const dataEquippedSkillList = document.getElementById('dataEquippedSkillList');
+    if (dataEquippedSkillList) {
+        const equippedSkills = getEquippedSkills(player);
+        if (equippedSkills.length === 0) {
+            dataEquippedSkillList.innerHTML = '<div class="skill-empty">装備中スキルはありません。</div>';
+        } else {
+            dataEquippedSkillList.innerHTML = equippedSkills
+                .map(skill => `
+                    <div class="skill-card equipped">
+                        <div class="skill-title-row">
+                            <span class="skill-name">${skill.name}</span>
+                            <span class="skill-category">${skill.category}</span>
+                        </div>
+                        <div class="skill-description">${skill.description}</div>
+                    </div>
+                `)
+                .join('');
+        }
+    }
+}
+
 function renderAll() {
     updatePlayerInfo();
     updateStats();
@@ -1790,6 +1891,7 @@ function renderAll() {
     updateCurrentModeLabel(currentBattleMode);
     renderCharacters();
     renderSettings();
+    renderDataScreen();
 }
 
 function renderSettings() {
