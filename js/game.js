@@ -1800,7 +1800,7 @@ function renderTrainingScreen() {
         }
         const barEl = document.getElementById(`training${label}Bar`);
         if (barEl) {
-            barEl.style.width = (player[key] / maxStat * 100) + '%';
+            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
         }
     });
 }
