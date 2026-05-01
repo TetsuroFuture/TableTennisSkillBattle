@@ -2215,28 +2215,87 @@ function awardExp(earnedExp) {
     player.usableExp += earnedExp;
 }
 
-function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines) {
-    const lineCount = randomInt(4, 8);
+function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName) {
     const actions = ['サーブ', 'レシーブ', 'ドライブ', 'ブロック', 'カウンター', 'カット', 'スマッシュ'];
     const momentumWords = ['主導権を握る', 'ラリーを制する', '粘り勝つ', 'ミスを誘う', '角度を突く'];
-    const playerStyleName = styles[playerStyleId].name;
-    const cpuStyleName = styles[cpuStyleId].name;
     const lines = [];
+    let playerScore = 0;
+    let cpuScore = 0;
+    let totalPointsPlayed = 0;
+    let deuceNotified = false;
 
-    for (let turn = 1; turn <= lineCount; turn += 1) {
+    const firstServerName = firstServerIsPlayer ? 'プレイヤー' : 'CPU';
+    lines.push(`${firstServerName}のサーブから開始！`);
+
+    while (true) {
+        const isDeuce = playerScore >= 10 && cpuScore >= 10;
+
+        // Determine current server:
+        // Normal play: serve switches every 2 points based on serve group number.
+        // Deuce (both >= 10): serve switches every 1 point. Deuce always begins at
+        // totalPointsPlayed=20, so (totalPointsPlayed - 20) counts extra deuce points,
+        // each with their own serve group to preserve the every-1-point rotation.
+        const serveGroup = isDeuce
+            ? (totalPointsPlayed - 20)
+            : Math.floor(totalPointsPlayed / 2);
+        const currentServerIsPlayer = firstServerIsPlayer ? (serveGroup % 2 === 0) : (serveGroup % 2 !== 0);
+
+        if (isDeuce && !deuceNotified) {
+            lines.push(`【デュース】${playerScore}-${cpuScore} — 2点差をつけた方の勝利！`);
+            deuceNotified = true;
+        }
+
+        const playerWinsPoint = Math.random() < perPointRate;
+        if (playerWinsPoint) {
+            playerScore++;
+        } else {
+            cpuScore++;
+        }
+        totalPointsPlayed++;
+
         const action = actions[randomInt(0, actions.length - 1)];
         const momentum = momentumWords[randomInt(0, momentumWords.length - 1)];
-        const playerTurnWin = Math.random() < (isPlayerWin ? 0.62 : 0.38);
-        const winner = playerTurnWin ? 'プレイヤー' : 'CPU';
-        const styleName = playerTurnWin ? playerStyleName : cpuStyleName;
-        lines.push(`${turn}球目: ${styleName}の${action}。${winner}が${momentum}。`);
+        const pointWinner = playerWinsPoint ? 'プレイヤー' : 'CPU';
+        const styleName = playerWinsPoint ? playerStyleName : cpuStyleName;
+        const serverName = currentServerIsPlayer ? 'プレイヤー' : 'CPU';
+
+        lines.push(`[${playerScore}-${cpuScore}] ${serverName}サーブ: ${styleName}の${action}。${pointWinner}が${momentum}。`);
+
+        if (Math.max(playerScore, cpuScore) >= 11 && Math.abs(playerScore - cpuScore) >= 2) {
+            break;
+        }
     }
+
+    return { lines, playerScore, cpuScore };
+}
+
+function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines) {
+    const playerStyleName = styles[playerStyleId].name;
+    const cpuStyleName = styles[cpuStyleId].name;
+    // Per-point win rates are biased so that the simulated game usually produces
+    // the same winner as the pre-determined match outcome (isPlayerWin).
+    // 0.62 gives the intended winner ~80% of individual simulated games,
+    // meaning the do-while loop below typically resolves in 1-2 iterations.
+    const perPointRate = isPlayerWin ? 0.62 : 0.38;
+    const firstServerIsPlayer = Math.random() < 0.5;
+
+    let result;
+    let attempts = 0;
+    do {
+        result = simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName);
+        attempts++;
+    } while ((result.playerScore > result.cpuScore) !== isPlayerWin && attempts < 20);
+
+    const lines = result.lines;
 
     skillLogLines.forEach(log => {
         lines.push(`スキル: ${log}`);
     });
 
-    lines.push(isPlayerWin ? '最終ポイント: プレイヤーの勝利！' : '最終ポイント: CPUの勝利...');
+    const finalScore = `${result.playerScore}-${result.cpuScore}`;
+    lines.push(isPlayerWin
+        ? `最終スコア ${finalScore}: プレイヤーの勝利！`
+        : `最終スコア ${finalScore}: CPUの勝利...`);
     return lines;
 }
 
