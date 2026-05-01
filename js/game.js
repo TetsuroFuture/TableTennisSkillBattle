@@ -1774,6 +1774,37 @@ function playBattleLogAnimation(logs, result) {
     setTimeout(playNext, 0);
 }
 
+function renderTrainingScreen() {
+    const trainingPlayerName = document.getElementById('trainingPlayerName');
+    if (trainingPlayerName) {
+        trainingPlayerName.textContent = player.name;
+    }
+
+    const trainingStyleName = document.getElementById('trainingStyleName');
+    if (trainingStyleName) {
+        trainingStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    }
+
+    const trainingPlayerExp = document.getElementById('trainingPlayerExp');
+    if (trainingPlayerExp) {
+        trainingPlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
+    }
+
+    const maxStat = 50;
+    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
+    statKeys.forEach(label => {
+        const key = label.toLowerCase();
+        const valEl = document.getElementById(`trainingStat${label}`);
+        if (valEl) {
+            valEl.textContent = player[key];
+        }
+        const barEl = document.getElementById(`training${label}Bar`);
+        if (barEl) {
+            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
+        }
+    });
+}
+
 function renderDataScreen() {
     const dataPlayerName = document.getElementById('dataPlayerName');
     if (dataPlayerName) {
@@ -1891,6 +1922,7 @@ function renderAll() {
     updateCurrentModeLabel(currentBattleMode);
     renderCharacters();
     renderSettings();
+    renderTrainingScreen();
     renderDataScreen();
 }
 
@@ -2394,6 +2426,7 @@ function setupTrainingButtons() {
 
             updateStats();
             updatePlayerInfo();
+            renderTrainingScreen();
             updateSkillUI();
 
             addLog(`${styles[player.style].name}で${getStatName(stat)}強化を実施！ ${stat.toUpperCase()}が+1になりました（${expCost}EXP消費）`, 'success');

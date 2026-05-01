@@ -246,6 +246,67 @@
                  ============================== -->
             <div id="screen-training" class="game-screen" style="display:none;">
 
+            <!-- プレイヤー情報セクション -->
+            <section class="player-info training-player-section">
+                <h2>👤 選手情報</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">選手名:</span>
+                        <span class="value" id="trainingPlayerName">新人選手</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">戦型:</span>
+                        <span class="value" id="trainingStyleName">未選択</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">EXP:</span>
+                        <span class="value" id="trainingPlayerExp">0 / 使用可: 0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ステータスセクション -->
+            <section class="stats-section training-stats-section">
+                <h2>📊 現在のステータス</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">ATK</div>
+                        <div class="stat-value" id="trainingStatAtk">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="trainingAtkBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">DEF</div>
+                        <div class="stat-value" id="trainingStatDef">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="trainingDefBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">SPD</div>
+                        <div class="stat-value" id="trainingStatSpd">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="trainingSpdBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">TEC</div>
+                        <div class="stat-value" id="trainingStatTec">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="trainingTecBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">STA</div>
+                        <div class="stat-value" id="trainingStatSta">10</div>
+                        <div class="stat-bar">
+                            <div class="stat-bar-fill" id="trainingStaBar" style="width: 20%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- 戦型選択セクション -->
             <section class="style-select-section" id="styleSelectSection">
                 <h2>戦型選択 <span class="style-lock-badge" id="styleLockBadge" style="display:none;">🔒 変更不可</span></h2>
@@ -317,6 +378,11 @@
                     </div>
                 </div>
             </section>
+
+            <!-- HOMEへ戻るボタン -->
+            <div class="settings-back-row">
+                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+            </div>
 
             </div><!-- /#screen-training -->
 
