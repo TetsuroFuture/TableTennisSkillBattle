@@ -518,6 +518,9 @@ function handleStartRatedBattle() {
         player.ratedLosses = (player.ratedLosses || 0) + 1;
     }
     player.rate = (player.rate || 1500) + rateChange;
+    if (player.rate > (player.maxRate || 0)) {
+        player.maxRate = player.rate;
+    }
     player.lastRatedBattleAt = new Date();
 
     const displayRateAfter = calculateEffectiveRate(player.rate, player.ratedMatches);
@@ -764,6 +767,7 @@ function normalizePlayerData(data, playerId) {
         wins: Number.isFinite(data?.wins) ? data.wins : 0,
         losses: Number.isFinite(data?.losses) ? data.losses : 0,
         rate: Number.isFinite(data?.rate) ? data.rate : 1500,
+        maxRate: Number.isFinite(data?.maxRate) ? data.maxRate : (Number.isFinite(data?.rate) ? data.rate : 1500),
         ratedMatches: Number.isFinite(data?.ratedMatches) ? data.ratedMatches : 0,
         ratedWins: Number.isFinite(data?.ratedWins) ? data.ratedWins : 0,
         ratedLosses: Number.isFinite(data?.ratedLosses) ? data.ratedLosses : 0,
@@ -803,6 +807,7 @@ function mapPlayerToFirestoreData(targetPlayer, playerId) {
         wins: Number.isFinite(targetPlayer.wins) ? targetPlayer.wins : 0,
         losses: Number.isFinite(targetPlayer.losses) ? targetPlayer.losses : 0,
         rate: Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500,
+        maxRate: Number.isFinite(targetPlayer.maxRate) ? targetPlayer.maxRate : (Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500),
         ratedMatches: Number.isFinite(targetPlayer.ratedMatches) ? targetPlayer.ratedMatches : 0,
         ratedWins: Number.isFinite(targetPlayer.ratedWins) ? targetPlayer.ratedWins : 0,
         ratedLosses: Number.isFinite(targetPlayer.ratedLosses) ? targetPlayer.ratedLosses : 0,
@@ -829,6 +834,7 @@ function applyPlayerDataToRuntime(data) {
     player.wins = data.wins;
     player.losses = data.losses;
     player.rate = data.rate;
+    player.maxRate = data.maxRate;
     player.ratedMatches = data.ratedMatches;
     player.ratedWins = data.ratedWins;
     player.ratedLosses = data.ratedLosses;
@@ -1004,6 +1010,7 @@ const player = {
     wins: 0,
     losses: 0,
     rate: 1500,
+    maxRate: 1500,
     ratedMatches: 0,
     ratedWins: 0,
     ratedLosses: 0,
@@ -2089,8 +2096,14 @@ function simulateBattle() {
 
 // プレイヤー情報を表示
 function updatePlayerInfo() {
-    document.getElementById('playerName').textContent = player.name;
-    document.getElementById('playerLevel').textContent = `Lv ${player.level}`;
+    const nameEl = document.getElementById('playerName');
+    if (nameEl) {
+        nameEl.textContent = player.name;
+    }
+    const levelEl = document.getElementById('playerLevel');
+    if (levelEl) {
+        levelEl.textContent = `Lv ${player.level}`;
+    }
 
     const expElement = document.getElementById('playerExp');
     if (expElement) {
@@ -2123,15 +2136,6 @@ function updateStats() {
 // ============================================================
 // 戦型情報を表示
 function updateStyleInfo() {
-    if (player.style === null) {
-        document.getElementById('styleName').textContent = '戦型を選択してください';
-        document.getElementById('styleDescription').textContent = '複数の戦型から一つを選んでください';
-    } else {
-        const style = styles[player.style];
-        document.getElementById('styleName').textContent = style.name;
-        document.getElementById('styleDescription').textContent = style.description;
-    }
-
     const locked = isSetupComplete();
     const lockBadge = document.getElementById('styleLockBadge');
     if (lockBadge) {
@@ -2146,44 +2150,82 @@ function updateStyleInfo() {
     });
 }
 
-function renderOwnedSkills() {
-    const ownedListElement = document.getElementById('ownedSkillList');
-    if (!ownedListElement) {
+function renderHomeScreen() {
+    const homePlayerName = document.getElementById('homePlayerName');
+    if (homePlayerName) {
+        homePlayerName.textContent = player.name;
+    }
+
+    const homeStyleName = document.getElementById('homeStyleName');
+    if (homeStyleName) {
+        homeStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    }
+
+    const homeStyleDesc = document.getElementById('homeStyleDesc');
+    if (homeStyleDesc) {
+        homeStyleDesc.textContent = player.style !== null ? styles[player.style].description : '';
+    }
+
+    const homePlayerExp = document.getElementById('homePlayerExp');
+    if (homePlayerExp) {
+        homePlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
+    }
+}
+
+function renderUnifiedSkillList() {
+    const container = document.getElementById('unifiedSkillList');
+    if (!container) {
         return;
     }
 
-    const ownedSkills = getOwnedSkills(player);
-    if (ownedSkills.length === 0) {
-        ownedListElement.innerHTML = '<div class="skill-empty">まだスキルカードを持っていません</div>';
-        return;
+    const maxSlots = getMaxEquipSlots(player.level);
+    ensurePlayerEquippedSkills(player);
+    const equippedCount = player.equippedSkills.length;
+
+    const equipInfoElement = document.getElementById('equipSlotsInfo');
+    if (equipInfoElement) {
+        equipInfoElement.textContent = `装備中 ${equippedCount} / ${maxSlots}`;
     }
 
-    const itemsHtml = ownedSkills
-        .map(skill => {
-            const equipped = isSkillEquipped(player, skill.id);
-            const maxSlots = getMaxEquipSlots(player.level);
-            const canEquip = !equipped && player.equippedSkills.length < maxSlots;
+    const itemsHtml = skillCards.map(skill => {
+        const owned = hasSkill(player, skill.id);
+        const equipped = isSkillEquipped(player, skill.id);
 
+        if (!owned) {
             return `
-                <div class="skill-card ${equipped ? 'equipped' : ''}">
+                <div class="skill-card skill-unacquired">
                     <div class="skill-title-row">
-                        <span class="skill-name">${skill.name}</span>
-                        <span class="skill-category">${skill.category}</span>
+                        <span class="skill-name">???</span>
+                        <span class="skill-category">???</span>
                     </div>
-                    <div class="skill-description">${skill.description}</div>
-                    <div class="skill-meta">発動条件: ${skill.trigger}</div>
-                    <div class="skill-meta">演出タグ: ${skill.animationTag}</div>
-                    ${
-                        equipped
-                            ? '<div class="equipped-label">装備中</div>'
-                            : `<button class="skill-action-btn equip-skill-btn" data-skill-id="${skill.id}" ${canEquip ? '' : 'disabled'}>装備する</button>`
-                    }
+                    <div class="skill-description">???</div>
                 </div>
             `;
-        })
-        .join('');
+        }
 
-    ownedListElement.innerHTML = itemsHtml;
+        const canEquip = !equipped && equippedCount < maxSlots;
+
+        return `
+            <div class="skill-card ${equipped ? 'equipped' : ''}">
+                <div class="skill-title-row">
+                    <span class="skill-name">${skill.name}</span>
+                    <span class="skill-category">${skill.category}</span>
+                </div>
+                <div class="skill-description">${skill.description}</div>
+                ${
+                    equipped
+                        ? `<button class="skill-action-btn unequip-skill-btn" data-skill-id="${skill.id}">解除する</button>`
+                        : `<button class="skill-action-btn equip-skill-btn" data-skill-id="${skill.id}" ${canEquip ? '' : 'disabled'}>装備する</button>`
+                }
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = itemsHtml;
+}
+
+function renderOwnedSkills() {
+    renderUnifiedSkillList();
 }
 
 // ============================================================
@@ -2416,6 +2458,11 @@ function renderTrainingScreen() {
         trainingStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
     }
 
+    const trainingStyleDesc = document.getElementById('trainingStyleDesc');
+    if (trainingStyleDesc) {
+        trainingStyleDesc.textContent = player.style !== null ? styles[player.style].description : '';
+    }
+
     const trainingPlayerExp = document.getElementById('trainingPlayerExp');
     if (trainingPlayerExp) {
         trainingPlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
@@ -2437,40 +2484,47 @@ function renderTrainingScreen() {
 }
 
 function renderDataScreen() {
-    const dataPlayerName = document.getElementById('dataPlayerName');
-    if (dataPlayerName) {
-        dataPlayerName.textContent = player.name;
+    // 全国Rate対決戦績
+    const displayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
+    const dataRate = document.getElementById('dataRate');
+    if (dataRate) {
+        dataRate.textContent = displayRate;
     }
 
-    const dataStyleName = document.getElementById('dataStyleName');
-    if (dataStyleName) {
-        dataStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    const dataMaxRate = document.getElementById('dataMaxRate');
+    if (dataMaxRate) {
+        const maxRate = player.maxRate || player.rate || 1500;
+        dataMaxRate.textContent = `(最高: ${maxRate})`;
     }
 
-    const dataPlayerLevel = document.getElementById('dataPlayerLevel');
-    if (dataPlayerLevel) {
-        dataPlayerLevel.textContent = `Lv ${player.level}`;
+    const ratedMatches = player.ratedMatches || 0;
+    const ratedWins = player.ratedWins || 0;
+    const ratedLosses = player.ratedLosses || 0;
+
+    const dataRatedMatches = document.getElementById('dataRatedMatches');
+    if (dataRatedMatches) {
+        dataRatedMatches.textContent = ratedMatches;
     }
 
-    const dataPlayerExp = document.getElementById('dataPlayerExp');
-    if (dataPlayerExp) {
-        dataPlayerExp.textContent = `${player.exp} (使用可: ${player.usableExp})`;
+    const dataRatedWins = document.getElementById('dataRatedWins');
+    if (dataRatedWins) {
+        dataRatedWins.textContent = ratedWins;
     }
 
-    const maxStat = 50;
-    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
-    statKeys.forEach(label => {
-        const key = label.toLowerCase();
-        const valEl = document.getElementById(`dataStat${label}`);
-        if (valEl) {
-            valEl.textContent = player[key];
-        }
-        const barEl = document.getElementById(`data${label}Bar`);
-        if (barEl) {
-            barEl.style.width = (player[key] / maxStat * 100) + '%';
-        }
-    });
+    const dataRatedLosses = document.getElementById('dataRatedLosses');
+    if (dataRatedLosses) {
+        dataRatedLosses.textContent = ratedLosses;
+    }
 
+    const dataRatedWinRate = document.getElementById('dataRatedWinRate');
+    if (dataRatedWinRate) {
+        const decidedMatches = ratedWins + ratedLosses;
+        dataRatedWinRate.textContent = decidedMatches > 0
+            ? `${(ratedWins / decidedMatches * 100).toFixed(1)}%`
+            : '-';
+    }
+
+    // CPU対戦戦績
     const totalMatches = (player.wins || 0) + (player.losses || 0);
     const dataMatches = document.getElementById('dataMatches');
     if (dataMatches) {
@@ -2496,63 +2550,19 @@ function renderDataScreen() {
             dataWinRate.textContent = '-';
         }
     }
-
-    const dataOwnedSkillList = document.getElementById('dataOwnedSkillList');
-    if (dataOwnedSkillList) {
-        const ownedSkills = getOwnedSkills(player);
-        if (ownedSkills.length === 0) {
-            dataOwnedSkillList.innerHTML = '<div class="skill-empty">まだスキルカードを持っていません</div>';
-        } else {
-            dataOwnedSkillList.innerHTML = ownedSkills
-                .map(skill => {
-                    const equipped = isSkillEquipped(player, skill.id);
-                    return `
-                        <div class="skill-card ${equipped ? 'equipped' : ''}">
-                            <div class="skill-title-row">
-                                <span class="skill-name">${skill.name}</span>
-                                <span class="skill-category">${skill.category}</span>
-                            </div>
-                            <div class="skill-description">${skill.description}</div>
-                            ${equipped ? '<div class="equipped-label">装備中</div>' : ''}
-                        </div>
-                    `;
-                })
-                .join('');
-        }
-    }
-
-    const dataEquippedSkillList = document.getElementById('dataEquippedSkillList');
-    if (dataEquippedSkillList) {
-        const equippedSkills = getEquippedSkills(player);
-        if (equippedSkills.length === 0) {
-            dataEquippedSkillList.innerHTML = '<div class="skill-empty">装備中スキルはありません。</div>';
-        } else {
-            dataEquippedSkillList.innerHTML = equippedSkills
-                .map(skill => `
-                    <div class="skill-card equipped">
-                        <div class="skill-title-row">
-                            <span class="skill-name">${skill.name}</span>
-                            <span class="skill-category">${skill.category}</span>
-                        </div>
-                        <div class="skill-description">${skill.description}</div>
-                    </div>
-                `)
-                .join('');
-        }
-    }
 }
 
 function renderAll() {
     updatePlayerInfo();
     updateStats();
     updateStyleInfo();
-    renderOwnedSkills();
-    renderEquippedSkills();
+    renderUnifiedSkillList();
     renderTactics();
     renderRivals();
     updateCurrentModeLabel(currentBattleMode);
     renderCharacters();
     renderSettings();
+    renderHomeScreen();
     renderTrainingScreen();
     renderDataScreen();
 }
@@ -3180,9 +3190,23 @@ function setupDebugSkillButton() {
 }
 
 function setupSkillButtons() {
-    const ownedListElement = document.getElementById('ownedSkillList');
-    const equippedListElement = document.getElementById('equippedSkillList');
+    const unifiedListElement = document.getElementById('unifiedSkillList');
 
+    if (unifiedListElement) {
+        unifiedListElement.addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.classList.contains('equip-skill-btn')) {
+                const skillId = target.getAttribute('data-skill-id');
+                equipSkill(player, skillId);
+            } else if (target.classList.contains('unequip-skill-btn')) {
+                const skillId = target.getAttribute('data-skill-id');
+                unequipSkill(player, skillId);
+            }
+        });
+    }
+
+    // Legacy: keep handlers for old list elements in case they exist
+    const ownedListElement = document.getElementById('ownedSkillList');
     if (ownedListElement) {
         ownedListElement.addEventListener('click', function(event) {
             const target = event.target;
@@ -3195,6 +3219,7 @@ function setupSkillButtons() {
         });
     }
 
+    const equippedListElement = document.getElementById('equippedSkillList');
     if (equippedListElement) {
         equippedListElement.addEventListener('click', function(event) {
             const target = event.target;
