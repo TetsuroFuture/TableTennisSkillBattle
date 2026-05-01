@@ -257,6 +257,12 @@ function createDefaultPlayer(playerId) {
         equippedSkills: [],
         wins: 0,
         losses: 0,
+        rate: 1500,
+        ratedMatches: 0,
+        ratedWins: 0,
+        ratedLosses: 0,
+        ratedDraws: 0,
+        lastRatedBattleAt: null,
         initialSetupCompleted: false,
         createdAt: isFirebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : null,
         updatedAt: isFirebaseReady ? firebase.firestore.FieldValue.serverTimestamp() : null
@@ -285,6 +291,12 @@ function normalizePlayerData(data, playerId) {
         equippedSkills: Array.isArray(data?.equippedSkills) ? data.equippedSkills : [],
         wins: Number.isFinite(data?.wins) ? data.wins : 0,
         losses: Number.isFinite(data?.losses) ? data.losses : 0,
+        rate: Number.isFinite(data?.rate) ? data.rate : 1500,
+        ratedMatches: Number.isFinite(data?.ratedMatches) ? data.ratedMatches : 0,
+        ratedWins: Number.isFinite(data?.ratedWins) ? data.ratedWins : 0,
+        ratedLosses: Number.isFinite(data?.ratedLosses) ? data.ratedLosses : 0,
+        ratedDraws: Number.isFinite(data?.ratedDraws) ? data.ratedDraws : 0,
+        lastRatedBattleAt: data?.lastRatedBattleAt ?? null,
         initialSetupCompleted: data?.initialSetupCompleted === true
     };
 
@@ -318,6 +330,12 @@ function mapPlayerToFirestoreData(targetPlayer, playerId) {
         equippedSkills: Array.isArray(targetPlayer.equippedSkills) ? targetPlayer.equippedSkills : [],
         wins: Number.isFinite(targetPlayer.wins) ? targetPlayer.wins : 0,
         losses: Number.isFinite(targetPlayer.losses) ? targetPlayer.losses : 0,
+        rate: Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500,
+        ratedMatches: Number.isFinite(targetPlayer.ratedMatches) ? targetPlayer.ratedMatches : 0,
+        ratedWins: Number.isFinite(targetPlayer.ratedWins) ? targetPlayer.ratedWins : 0,
+        ratedLosses: Number.isFinite(targetPlayer.ratedLosses) ? targetPlayer.ratedLosses : 0,
+        ratedDraws: Number.isFinite(targetPlayer.ratedDraws) ? targetPlayer.ratedDraws : 0,
+        lastRatedBattleAt: targetPlayer.lastRatedBattleAt ?? null,
         initialSetupCompleted: targetPlayer.initialSetupCompleted === true,
         updatedAt: nowTimestamp
     };
@@ -338,6 +356,12 @@ function applyPlayerDataToRuntime(data) {
     player.equippedSkills = data.equippedSkills;
     player.wins = data.wins;
     player.losses = data.losses;
+    player.rate = data.rate;
+    player.ratedMatches = data.ratedMatches;
+    player.ratedWins = data.ratedWins;
+    player.ratedLosses = data.ratedLosses;
+    player.ratedDraws = data.ratedDraws;
+    player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
 }
@@ -506,6 +530,12 @@ const player = {
     equippedSkills: [], // 装備中スキルID
     wins: 0,
     losses: 0,
+    rate: 1500,
+    ratedMatches: 0,
+    ratedWins: 0,
+    ratedLosses: 0,
+    ratedDraws: 0,
+    lastRatedBattleAt: null,
     initialSetupCompleted: false  // 初期設定完了フラグ
 };
 
