@@ -1732,6 +1732,33 @@ section h3 {
     border-radius: 8px;
 }
 
+/* データ確認画面 */
+.data-player-section {
+    border-left-color: #667eea;
+}
+
+.data-stats-section {
+    border-left-color: #ff6b6b;
+}
+
+.data-records-section {
+    border-left-color: #ffd43b;
+}
+
+.data-skills-section {
+    border-left-color: #20c997;
+}
+
+.data-equipped-section {
+    border-left-color: #339af0;
+}
+
+.skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 /* 保存ボタン追加スタイル */
 .save-actions {
     display: flex;
