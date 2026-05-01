@@ -1927,7 +1927,7 @@ function generateModeStartLog(mode, enemy) {
         return ['大会モードの試合を開始した。', '3連戦を勝ち抜いて優勝を狙う。'];
     }
 
-    return ['練習試合を開始した。', 'ランダムな相手と対戦する。'];
+    return ['練習試合を開始した。', `${enemy.name}と対戦する。`];
 }
 
 function scaleUnitStats(unit, scaleRate) {
@@ -2051,7 +2051,7 @@ function simulateBattleWithOptions(options = {}) {
         ...generateModeStartLog(mode, enemy),
         ...(roundIndex !== null ? [`大会 第${roundIndex + 1}試合`] : []),
         ...generateTacticLog(tacticId),
-        ...buildBattleLogLines(isPlayerWin, player.style, enemy.style, generateSkillBattleLogs(player, context))
+        ...buildBattleLogLines(isPlayerWin, player.style, enemy.style, generateSkillBattleLogs(player, context), player.name, enemy.name)
     ];
 
     return {
@@ -2762,7 +2762,7 @@ function awardExp(earnedExp) {
     player.usableExp += earnedExp;
 }
 
-function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName) {
+function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName, playerName, cpuName) {
     const actions = ['サーブ', 'レシーブ', 'ドライブ', 'ブロック', 'カウンター', 'カット', 'スマッシュ'];
     const momentumWords = ['主導権を握る', 'ラリーを制する', '粘り勝つ', 'ミスを誘う', '角度を突く'];
     const lines = [];
@@ -2771,7 +2771,7 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
     let totalPointsPlayed = 0;
     let deuceNotified = false;
 
-    const firstServerName = firstServerIsPlayer ? 'プレイヤー' : 'CPU';
+    const firstServerName = firstServerIsPlayer ? playerName : cpuName;
     lines.push(`${firstServerName}のサーブから開始！`);
 
     while (true) {
@@ -2802,11 +2802,11 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
 
         const action = actions[randomInt(0, actions.length - 1)];
         const momentum = momentumWords[randomInt(0, momentumWords.length - 1)];
-        const pointWinner = playerWinsPoint ? 'プレイヤー' : 'CPU';
+        const pointWinner = playerWinsPoint ? playerName : cpuName;
         const styleName = playerWinsPoint ? playerStyleName : cpuStyleName;
-        const serverName = currentServerIsPlayer ? 'プレイヤー' : 'CPU';
+        const serverName = currentServerIsPlayer ? playerName : cpuName;
 
-        lines.push(`[${playerScore}-${cpuScore}] ${serverName}サーブ: ${styleName}の${action}。${pointWinner}が${momentum}。`);
+        lines.push(`[${playerScore}-${cpuScore}] ${serverName}のサーブ。${styleName}の${action}。${pointWinner}が${momentum}。`);
 
         if (Math.max(playerScore, cpuScore) >= 11 && Math.abs(playerScore - cpuScore) >= 2) {
             break;
@@ -2816,7 +2816,7 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
     return { lines, playerScore, cpuScore };
 }
 
-function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines) {
+function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines, playerName, cpuName) {
     const playerStyleName = styles[playerStyleId].name;
     const cpuStyleName = styles[cpuStyleId].name;
     // Per-point win rates are biased so that the simulated game usually produces
@@ -2829,7 +2829,7 @@ function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLin
     let result;
     let attempts = 0;
     do {
-        result = simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName);
+        result = simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, cpuStyleName, playerName, cpuName);
         attempts++;
     } while ((result.playerScore > result.cpuScore) !== isPlayerWin && attempts < 20);
 
@@ -2841,8 +2841,8 @@ function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLin
 
     const finalScore = `${result.playerScore}-${result.cpuScore}`;
     lines.push(isPlayerWin
-        ? `最終スコア ${finalScore}: プレイヤーの勝利！`
-        : `最終スコア ${finalScore}: CPUの勝利...`);
+        ? `最終スコア ${finalScore}: ${playerName}の勝利！`
+        : `最終スコア ${finalScore}: ${cpuName}の勝利...`);
     return lines;
 }
 
