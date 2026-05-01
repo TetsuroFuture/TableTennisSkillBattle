@@ -515,7 +515,7 @@ function handleStartRatedBattle() {
 
     const displayRateAfter = calculateEffectiveRate(player.rate, player.ratedMatches);
 
-    result.rateChange = rateChange;
+    result.rateChange = displayRateAfter - displayRateBefore;
     result.displayRateBefore = displayRateBefore;
     result.displayRateAfter = displayRateAfter;
     result.ratedMatchesAfter = player.ratedMatches;
