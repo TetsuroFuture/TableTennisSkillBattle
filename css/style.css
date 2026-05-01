@@ -1996,3 +1996,253 @@ section h3 {
     background: linear-gradient(135deg, #ff6b6b, #e03131);
 }
 
+/* 全国Rate対戦開始画面 */
+.rated-battle-start-section {
+    border-left-color: #e03131;
+}
+
+.rated-battle-subtitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e03131;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.rated-battle-desc {
+    font-size: 13px;
+    color: #495057;
+    margin-bottom: 16px;
+}
+
+.rated-summary-card {
+    background: white;
+    border: 2px solid #ffc9c9;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #fff5f5 0%, #fff 70%);
+}
+
+.rated-summary-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 0;
+}
+
+.rated-summary-item {
+    flex: 1;
+}
+
+.rated-summary-label {
+    font-size: 11px;
+    color: #868e96;
+    font-weight: 600;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rated-summary-value {
+    font-size: 28px;
+    font-weight: 900;
+    color: #e03131;
+    line-height: 1.1;
+}
+
+.rated-record-value {
+    font-size: 16px;
+    color: #343a40;
+}
+
+.rated-win-rate {
+    font-size: 12px;
+    color: #495057;
+    margin-top: 2px;
+}
+
+.rated-provisional-area {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: #fff9db;
+    border: 1px solid #ffd43b;
+    border-radius: 8px;
+}
+
+.rated-provisional-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e67700;
+    margin-bottom: 4px;
+}
+
+.rated-provisional-remaining {
+    font-size: 13px;
+    color: #343a40;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.rated-provisional-hint {
+    font-size: 11px;
+    color: #868e96;
+    line-height: 1.5;
+}
+
+.rated-history-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.rated-history-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 10px;
+}
+
+.rated-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rated-history-item {
+    font-size: 13px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+.rated-history-item.win {
+    color: #2f9e44;
+    background: #f3faf5;
+}
+
+.rated-history-item.lose {
+    color: #e03131;
+    background: #fff5f5;
+}
+
+.rated-no-history {
+    font-size: 13px;
+    color: #868e96;
+    line-height: 1.7;
+    padding: 8px 0;
+}
+
+.rated-history-summary {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #495057;
+    border-top: 1px solid #e9ecef;
+    padding-top: 8px;
+}
+
+.rated-search-status {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e03131;
+    font-style: italic;
+    margin-bottom: 12px;
+    min-height: 20px;
+}
+
+.rated-opponent-area {
+    background: white;
+    border: 2px solid #e03131;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #fff5f5 0%, #fff 70%);
+}
+
+.rated-opponent-found-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e03131;
+    margin-bottom: 10px;
+}
+
+.rated-opponent-card {
+    background: white;
+    border: 1px solid #ffc9c9;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.rated-opponent-name {
+    font-size: 18px;
+    font-weight: 900;
+    color: #343a40;
+    margin-bottom: 4px;
+}
+
+.rated-opponent-rate {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e03131;
+    margin-bottom: 3px;
+}
+
+.rated-opponent-style {
+    font-size: 12px;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.rated-rate-diff {
+    font-size: 13px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 6px;
+    line-height: 1.6;
+}
+
+.rated-tier-label {
+    font-size: 12px;
+    color: #868e96;
+    font-weight: 600;
+}
+
+.rated-opponent-comment {
+    font-size: 12px;
+    color: #e03131;
+    font-style: italic;
+}
+
+.rated-battle-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rated-find-btn {
+    background: linear-gradient(135deg, #e03131 0%, #c92a2a 100%);
+}
+
+.rated-find-btn:hover {
+    background: linear-gradient(135deg, #c92a2a 0%, #b02020 100%);
+}
+
+.rated-start-btn {
+    background: linear-gradient(135deg, #2f9e44 0%, #2b8a3e 100%);
+}
+
+.rated-start-btn:hover {
+    background: linear-gradient(135deg, #2b8a3e 0%, #237032 100%);
+}
+
+.rated-find-another-btn {
+    background: linear-gradient(135deg, #e67700 0%, #d9480f 100%);
+}
+
+.rated-find-another-btn:hover {
+    background: linear-gradient(135deg, #d9480f 0%, #c0390a 100%);
+}
+

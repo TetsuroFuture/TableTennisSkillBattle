@@ -426,6 +426,73 @@
             </div><!-- /#screen-battleModeSelect -->
 
             <!-- ==============================
+                 全国Rate対戦開始画面
+                 ============================== -->
+            <div id="screen-ratedBattleStart" class="game-screen" style="display:none;">
+
+            <section class="rated-battle-start-section">
+                <h2>🌏 全国Rate対戦</h2>
+                <p class="rated-battle-subtitle">今日の道場破り</p>
+                <p class="rated-battle-desc">育てた選手で、全国のライバルに挑戦しよう！</p>
+
+                <!-- 現在Rate・成績 -->
+                <div class="rated-summary-card">
+                    <div class="rated-summary-row">
+                        <div class="rated-summary-item">
+                            <div class="rated-summary-label">現在Rate</div>
+                            <div class="rated-summary-value" id="ratedDisplayRate">-</div>
+                        </div>
+                        <div class="rated-summary-item">
+                            <div class="rated-summary-label">Rate対戦成績</div>
+                            <div class="rated-summary-value rated-record-value" id="ratedRecord">-</div>
+                            <div class="rated-win-rate" id="ratedWinRate"></div>
+                        </div>
+                    </div>
+
+                    <!-- 暫定Rate期間 -->
+                    <div class="rated-provisional-area" id="ratedProvisionalArea" style="display:none;">
+                        <div class="rated-provisional-badge">暫定Rate期間中</div>
+                        <div class="rated-provisional-remaining" id="ratedProvisionalRemaining"></div>
+                        <div class="rated-provisional-hint">対戦を重ねるほど、Rateが本来の強さに近づいていきます。</div>
+                    </div>
+                </div>
+
+                <!-- 直近5試合 -->
+                <div class="rated-history-card">
+                    <h3>📊 直近5試合</h3>
+                    <div id="recentRatedBattleList" class="rated-history-list">
+                        <p class="rated-no-history">読み込み中...</p>
+                    </div>
+                    <div id="recentRatedBattleSummary" class="rated-history-summary" style="display:none;"></div>
+                </div>
+
+                <!-- 検索ステータス -->
+                <div class="rated-search-status" id="ratedSearchStatus">今日の道場破り、誰に挑む？</div>
+
+                <!-- 対戦相手確認エリア -->
+                <div class="rated-opponent-area" id="ratedOpponentArea" style="display:none;">
+                    <div class="rated-opponent-found-label">対戦相手が見つかりました！</div>
+                    <div class="rated-opponent-card">
+                        <div class="rated-opponent-name" id="ratedOpponentName">-</div>
+                        <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
+                        <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
+                        <div class="rated-rate-diff" id="ratedRateDiff">-</div>
+                        <div class="rated-opponent-comment" id="ratedOpponentComment"></div>
+                    </div>
+                </div>
+
+                <!-- ボタン -->
+                <div class="rated-battle-buttons">
+                    <button class="battle-btn rated-find-btn" id="findRatedOpponentBtn">🔍 対戦相手を探す</button>
+                    <button class="battle-btn rated-start-btn" id="startRatedBattleBtn" style="display:none;">⚔️ この相手と対戦する</button>
+                    <button class="battle-btn rated-find-another-btn" id="findAnotherRatedOpponentBtn" style="display:none;">🔄 別の相手を探す</button>
+                    <button class="nav-btn settings-back-btn" data-screen="battleModeSelect">← 戻る</button>
+                </div>
+            </section>
+
+            </div><!-- /#screen-ratedBattleStart -->
+
+            <!-- ==============================
                  試合開始画面
                  ============================== -->
             <div id="screen-battleStart" class="game-screen" style="display:none;">
