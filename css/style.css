@@ -1639,6 +1639,86 @@ section h3 {
     color: #444;
 }
 
+/* 対戦モード選択画面 */
+.battle-mode-select-section {
+    border-left-color: #ff922b;
+}
+
+.battle-mode-select-sub {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.battle-mode-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.battle-mode-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 18px 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.battle-mode-card.cpu-battle-card {
+    border-left: 4px solid #4263eb;
+}
+
+.battle-mode-card.rated-battle-card {
+    border-left: 4px solid #f03e3e;
+    background: linear-gradient(135deg, #fff5f5 0%, #fff 60%);
+}
+
+.battle-mode-card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.battle-mode-card-icon {
+    font-size: 26px;
+    line-height: 1;
+}
+
+.battle-mode-card-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #343a40;
+}
+
+.battle-mode-card-desc {
+    font-size: 13px;
+    color: #495057;
+    line-height: 1.7;
+    margin-bottom: 12px;
+}
+
+.battle-mode-card-copy {
+    font-size: 12px;
+    color: #e03131;
+    font-weight: 700;
+    margin-bottom: 12px;
+    font-style: italic;
+}
+
+.battle-mode-start-btn {
+    width: 100%;
+}
+
+.battle-mode-start-btn.rated-btn {
+    background: linear-gradient(135deg, #e03131 0%, #c92a2a 100%);
+}
+
+.battle-mode-start-btn.rated-btn:hover {
+    background: linear-gradient(135deg, #c92a2a 0%, #b02020 100%);
+}
+
 /* 試合開始画面 */
 .battle-start-section {
     border-left-color: #ff922b;

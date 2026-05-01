@@ -56,7 +56,7 @@ let isNewPlayerSetup = false;
 // 画面状態管理
 // ============================================================
 
-const SCREEN_NAMES = ['home', 'training', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
+const SCREEN_NAMES = ['home', 'training', 'battleModeSelect', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
 let currentScreen = 'home';
 
 let battleStartCpu = null;
@@ -99,6 +99,34 @@ function setupNavButtons() {
             }
         });
     });
+}
+
+// ============================================================
+// 対戦モード選択画面
+// ============================================================
+
+function showBattleModeSelectScreen() {
+    changeScreen('battleModeSelect');
+}
+
+function handleSelectCpuBattle() {
+    changeScreen('battleStart');
+}
+
+function handleSelectRatedBattle() {
+    changeScreen('battleStart');
+}
+
+function setupBattleModeSelectButtons() {
+    const cpuBtn = document.getElementById('selectCpuBattleBtn');
+    if (cpuBtn) {
+        cpuBtn.addEventListener('click', handleSelectCpuBattle);
+    }
+
+    const ratedBtn = document.getElementById('selectRatedBattleBtn');
+    if (ratedBtn) {
+        ratedBtn.addEventListener('click', handleSelectRatedBattle);
+    }
 }
 
 function renderBattleStartScreen() {
@@ -3493,6 +3521,7 @@ async function initGame() {
     setupBattleButton();
     setupConfirmStartBattleButton();
     setupTournamentButton();
+    setupBattleModeSelectButtons();
     setupTacticSelect();
     setupRivalButtons();
     setupDebugSkillButton();

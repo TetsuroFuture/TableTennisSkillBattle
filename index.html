@@ -155,7 +155,7 @@
             <nav class="game-nav">
                 <button class="nav-btn active" data-screen="home">🏠 HOME</button>
                 <button class="nav-btn" data-screen="training">💪 育成</button>
-                <button class="nav-btn" data-screen="battleStart">⚔️ 試合</button>
+                <button class="nav-btn" data-screen="battleModeSelect">⚔️ 対戦</button>
                 <button class="nav-btn" data-screen="data">📊 データ</button>
                 <button class="nav-btn" data-screen="settings">⚙️ 設定</button>
             </nav>
@@ -224,9 +224,9 @@
                         <span class="home-menu-icon">💪</span>
                         <span class="home-menu-label">育成</span>
                     </button>
-                    <button class="home-menu-card" data-screen="battleStart">
+                    <button class="home-menu-card" data-screen="battleModeSelect">
                         <span class="home-menu-icon">⚔️</span>
-                        <span class="home-menu-label">試合</span>
+                        <span class="home-menu-label">対戦</span>
                     </button>
                     <button class="home-menu-card" data-screen="data">
                         <span class="home-menu-icon">📊</span>
@@ -387,6 +387,45 @@
             </div><!-- /#screen-training -->
 
             <!-- ==============================
+                 対戦モード選択画面
+                 ============================== -->
+            <div id="screen-battleModeSelect" class="game-screen" style="display:none;">
+
+            <section class="battle-mode-select-section">
+                <h2>⚔️ 対戦</h2>
+                <p class="battle-mode-select-sub">どの戦いに挑む？</p>
+
+                <div class="battle-mode-card-list">
+                    <!-- CPU対戦カード -->
+                    <div class="battle-mode-card cpu-battle-card">
+                        <div class="battle-mode-card-header">
+                            <span class="battle-mode-card-icon">🤖</span>
+                            <span class="battle-mode-card-title">CPU対戦</span>
+                        </div>
+                        <p class="battle-mode-card-desc">練習相手と気軽にバトル。<br>育成した選手の強さを試そう。</p>
+                        <button class="battle-btn battle-mode-start-btn" id="selectCpuBattleBtn">CPU対戦へ</button>
+                    </div>
+
+                    <!-- 全国Rate対戦カード -->
+                    <div class="battle-mode-card rated-battle-card">
+                        <div class="battle-mode-card-header">
+                            <span class="battle-mode-card-icon">🌏</span>
+                            <span class="battle-mode-card-title">全国Rate対戦</span>
+                        </div>
+                        <p class="battle-mode-card-desc">全国のライバル選手に挑め！<br>勝利を重ねてRateを上げよう。</p>
+                        <p class="battle-mode-card-copy">今日の道場破り、開幕。</p>
+                        <button class="battle-btn battle-mode-start-btn rated-btn" id="selectRatedBattleBtn">全国Rate対戦へ</button>
+                    </div>
+                </div>
+
+                <div class="settings-back-row">
+                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                </div>
+            </section>
+
+            </div><!-- /#screen-battleModeSelect -->
+
+            <!-- ==============================
                  試合開始画面
                  ============================== -->
             <div id="screen-battleStart" class="game-screen" style="display:none;">
@@ -428,7 +467,7 @@
 
                 <div class="battle-start-buttons">
                     <button class="battle-btn" id="confirmStartBattleBtn">▶ 試合開始</button>
-                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                    <button class="nav-btn settings-back-btn" data-screen="battleModeSelect">← 対戦モード選択へ戻る</button>
                 </div>
             </section>
 
