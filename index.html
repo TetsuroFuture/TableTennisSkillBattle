@@ -467,16 +467,76 @@
             </div><!-- /#screen-data -->
 
             <!-- ==============================
-                 設定画面（準備中）
+                 設定画面
                  ============================== -->
             <div id="screen-settings" class="game-screen" style="display:none;">
-                <section class="screen-placeholder-section">
-                    <div class="screen-placeholder">
-                        <div class="placeholder-icon">⚙️</div>
-                        <h2>設定画面</h2>
-                        <p>（準備中）</p>
+
+            <!-- プレイヤー情報セクション -->
+            <section class="player-info">
+                <h2>👤 プレイヤー情報</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">選手名:</span>
+                        <span class="value" id="settingsPlayerName">新人選手</span>
                     </div>
-                </section>
+                    <div class="info-row">
+                        <span class="label">戦型:</span>
+                        <span class="value" id="settingsStyleName">未選択</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- データ保存状況セクション -->
+            <section class="settings-save-section">
+                <h2>💾 データ保存状況</h2>
+                <div class="player-details">
+                    <div class="info-row">
+                        <span class="label">保存状態:</span>
+                        <span class="value" id="settingsSaveStatus">確認中...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 設定項目セクション -->
+            <section class="settings-items-section">
+                <h2>🔧 設定項目</h2>
+                <div class="settings-items-list">
+                    <div class="settings-item-card settings-item-disabled">
+                        <span class="settings-item-icon">✏️</span>
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">プロフィール編集</span>
+                            <span class="settings-item-status">今後実装予定</span>
+                        </div>
+                    </div>
+                    <div class="settings-item-card settings-item-disabled">
+                        <span class="settings-item-icon">📝</span>
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">選手名変更</span>
+                            <span class="settings-item-status">今後実装予定</span>
+                        </div>
+                    </div>
+                    <div class="settings-item-card settings-item-disabled">
+                        <span class="settings-item-icon">🔑</span>
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">パスワード変更</span>
+                            <span class="settings-item-status">今後実装予定</span>
+                        </div>
+                    </div>
+                    <div class="settings-item-card settings-item-disabled">
+                        <span class="settings-item-icon">🗑️</span>
+                        <div class="settings-item-info">
+                            <span class="settings-item-label">データリセット</span>
+                            <span class="settings-item-status">今後実装予定</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- HOMEへ戻るボタン -->
+            <div class="settings-back-row">
+                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+            </div>
+
             </div><!-- /#screen-settings -->
 
         </main>
