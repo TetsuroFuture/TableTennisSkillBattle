@@ -1482,22 +1482,7 @@ function createEnemyForMode(mode, rivalId = null, targetPlayer = player) {
 }
 
 function calculateExpReward(mode, result, options = {}) {
-    if (mode === 'practice') {
-        return result === 'win' ? 30 : 15;
-    }
-
-    if (mode === 'rival') {
-        return result === 'win' ? 45 : 20;
-    }
-
-    if (mode === 'tournament') {
-        if (options.isChampion) {
-            return 85;
-        }
-        return result === 'win' ? 35 : 15;
-    }
-
-    return result === 'win' ? 30 : 15;
+    return calculateBattleExp(result, options);
 }
 
 function simulateBattleWithOptions(options = {}) {
@@ -1539,12 +1524,14 @@ function simulateBattleWithOptions(options = {}) {
     );
     const isPlayerWin = Math.random() < finalWinRate;
 
+    const battleLogResult = buildBattleLogLines(isPlayerWin, player.style, enemy.style, generateSkillBattleLogs(player, context));
     const battleLines = [
         ...generateModeStartLog(mode, enemy),
         ...(roundIndex !== null ? [`大会 第${roundIndex + 1}試合`] : []),
         ...generateTacticLog(tacticId),
-        ...buildBattleLogLines(isPlayerWin, player.style, enemy.style, generateSkillBattleLogs(player, context))
+        ...battleLogResult.lines
     ];
+    const isCloseMatch = Math.abs(battleLogResult.playerScore - battleLogResult.cpuScore) <= 2;
 
     return {
         mode,
@@ -1562,6 +1549,9 @@ function simulateBattleWithOptions(options = {}) {
         finalWinRate,
         isPlayerWin,
         battleLines,
+        playerScore: battleLogResult.playerScore,
+        cpuScore: battleLogResult.cpuScore,
+        isCloseMatch,
         roundIndex,
         result: isPlayerWin ? 'win' : 'lose',
         log: battleLines
@@ -2249,6 +2239,26 @@ function calcBattleExp(isPlayerWin, baseCategoryModifier, sameCategoryModifier) 
     return Math.floor(baseExp * modifierBonus);
 }
 
+function calculateBattleExp(result, options = {}) {
+    const config = BALANCE_CONFIG.exp;
+
+    let exp = config.base;
+
+    if (result === "win") {
+        exp += config.winBonus;
+    } else if (result === "lose") {
+        exp += config.loseBonus;
+    } else if (result === "draw") {
+        exp += config.drawBonus;
+    }
+
+    if (options.isCloseMatch) {
+        exp += config.closeMatchBonus;
+    }
+
+    return Math.min(exp, config.maxPerBattle);
+}
+
 function awardExp(earnedExp) {
     player.exp += earnedExp;
     player.usableExp += earnedExp;
@@ -2335,7 +2345,7 @@ function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLin
     lines.push(isPlayerWin
         ? `最終スコア ${finalScore}: プレイヤーの勝利！`
         : `最終スコア ${finalScore}: CPUの勝利...`);
-    return lines;
+    return { lines, playerScore: result.playerScore, cpuScore: result.cpuScore };
 }
 
 function updateBattleResultView(cpu, playerPower, cpuPower, winRate, isPlayerWin) {
@@ -2515,10 +2525,10 @@ function startTournament() {
         if (roundResult.result === 'win') {
             wins += 1;
             player.wins += 1;
-            totalExp += calculateExpReward('tournament', 'win', { roundIndex: round - 1 });
+            totalExp += calculateExpReward('tournament', 'win', { roundIndex: round - 1, isCloseMatch: roundResult.isCloseMatch });
         } else {
             player.losses += 1;
-            totalExp += calculateExpReward('tournament', 'lose', { roundIndex: round - 1 });
+            totalExp += calculateExpReward('tournament', 'lose', { roundIndex: round - 1, isCloseMatch: roundResult.isCloseMatch });
             tournamentLogs.push('敗北したため、大会はここで終了です。');
             break;
         }
@@ -2529,8 +2539,7 @@ function startTournament() {
     }
 
     if (wins === 3) {
-        totalExp += calculateExpReward('tournament', 'win', { isChampion: true }) - calculateExpReward('tournament', 'win');
-        tournamentLogs.push('大会優勝！優勝ボーナスを獲得しました。');
+        tournamentLogs.push('大会優勝！');
     }
 
     awardExp(totalExp);
