@@ -2520,8 +2520,8 @@ function setupConfirmStartBattleButton() {
 
     btn.addEventListener('click', function() {
         if (player.style === null) {
-            addLog('試合前に戦型を選択してください！', 'warning');
-            changeScreen('home');
+            addLog('試合前に戦型を選択してください！育成画面で戦型を設定してください。', 'warning');
+            changeScreen('training');
             return;
         }
 
@@ -2529,7 +2529,7 @@ function setupConfirmStartBattleButton() {
         const result = simulateBattleWithOptions({
             mode: 'practice',
             tacticId: selectedTacticId,
-            enemy: battleStartCpu || undefined
+            enemy: battleStartCpu
         });
         applyMatchResult(result);
         changeScreen('battle');
