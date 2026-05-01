@@ -21,6 +21,7 @@ const SCREEN_NAMES = ['home', 'training', 'battleStart', 'battle', 'battleResult
 let currentScreen = 'home';
 
 let battleStartCpu = null;
+let lastBattleResult = null;
 
 function changeScreen(screenName) {
     if (!SCREEN_NAMES.includes(screenName)) {
@@ -43,6 +44,10 @@ function changeScreen(screenName) {
 
     if (screenName === 'battleStart') {
         renderBattleStartScreen();
+    }
+
+    if (screenName === 'battleResult') {
+        renderBattleResultScreen();
     }
 }
 
@@ -79,6 +84,55 @@ function renderBattleStartScreen() {
     cpuStyleEl.textContent = styles[battleStartCpu.style].name;
     cpuStatsEl.textContent =
         `ATK: ${battleStartCpu.atk}  DEF: ${battleStartCpu.def}  SPD: ${battleStartCpu.spd}  TEC: ${battleStartCpu.tec}  STA: ${battleStartCpu.sta}`;
+}
+
+// ============================================================
+
+function renderBattleResultScreen() {
+    if (!lastBattleResult) {
+        return;
+    }
+
+    const r = lastBattleResult;
+
+    const banner = document.getElementById('brResultBanner');
+    const resultText = document.getElementById('brResultText');
+    if (banner && resultText) {
+        banner.classList.remove('br-win', 'br-lose');
+        if (r.isTournament) {
+            const isChampion = r.wins === 3;
+            resultText.textContent = isChampion ? '🏆 大会優勝！' : `大会終了（${r.wins}勝）`;
+            banner.classList.add(isChampion ? 'br-win' : 'br-lose');
+        } else {
+            resultText.textContent = r.isPlayerWin ? '🎉 勝利！' : '😢 敗北...';
+            banner.classList.add(r.isPlayerWin ? 'br-win' : 'br-lose');
+        }
+    }
+
+    const setEl = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setEl('brPlayerName', r.playerName);
+    setEl('brPlayerStyle', r.playerStyle);
+    setEl('brCpuName', r.cpuName);
+    setEl('brCpuStyle', r.cpuStyle);
+    setEl('brPlayerPower', r.playerPower.toFixed(1));
+    setEl('brCpuPower', r.cpuPower.toFixed(1));
+    setEl('brExpGained', `+${r.expGained} EXP`);
+    setEl('brPlayerLevel', `Lv ${r.playerLevel}`);
+    setEl('brPlayerExp', `${r.playerExp} EXP`);
+    setEl('brRecord', `${r.playerWins}勝 ${r.playerLosses}敗`);
+
+    const logEl = document.getElementById('brBattleLog');
+    if (logEl) {
+        logEl.innerHTML = r.battleLines
+            .map(line => `<div class="battle-log-entry">${line}</div>`)
+            .join('');
+    }
 }
 
 // ============================================================
@@ -2288,6 +2342,24 @@ function applyMatchResult(result) {
 
     renderAll();
     autoSavePlayer('match_finished');
+
+    lastBattleResult = {
+        isTournament: false,
+        isPlayerWin: result.isPlayerWin,
+        playerName: player.name,
+        playerStyle: player.style !== null ? styles[player.style].name : '未選択',
+        cpuName: result.cpu.name,
+        cpuStyle: styles[result.cpu.style].name,
+        playerPower: result.playerPower,
+        cpuPower: result.cpuPower,
+        expGained,
+        battleLines: result.battleLines,
+        playerLevel: player.level,
+        playerExp: player.exp,
+        playerWins: player.wins,
+        playerLosses: player.losses
+    };
+    changeScreen('battleResult');
 }
 
 function startPracticeMatch() {
@@ -2392,6 +2464,25 @@ function startTournament() {
 
     renderAll();
     autoSavePlayer('tournament_finished');
+
+    lastBattleResult = {
+        isTournament: true,
+        isPlayerWin: wins === 3,
+        wins,
+        playerName: player.name,
+        playerStyle: player.style !== null ? styles[player.style].name : '未選択',
+        cpuName: lastResult.cpu.name,
+        cpuStyle: styles[lastResult.cpu.style].name,
+        playerPower: lastResult.playerPower,
+        cpuPower: lastResult.cpuPower,
+        expGained: totalExp,
+        battleLines: tournamentLogs,
+        playerLevel: player.level,
+        playerExp: player.exp,
+        playerWins: player.wins,
+        playerLosses: player.losses
+    };
+    changeScreen('battleResult');
 }
 
 // ============================================================
@@ -2532,7 +2623,6 @@ function setupConfirmStartBattleButton() {
             enemy: battleStartCpu || undefined
         });
         applyMatchResult(result);
-        changeScreen('battle');
     });
 }
 
@@ -2545,6 +2635,15 @@ function setupTournamentButton() {
     tournamentButton.addEventListener('click', function() {
         startTournament();
     });
+}
+
+function setupBattleResultButtons() {
+    const playAgainBtn = document.getElementById('brPlayAgainBtn');
+    if (playAgainBtn) {
+        playAgainBtn.addEventListener('click', function() {
+            changeScreen('battleStart');
+        });
+    }
 }
 
 function setupTacticSelect() {
@@ -3270,6 +3369,7 @@ async function initGame() {
     setupRivalButtons();
     setupDebugSkillButton();
     setupManualSaveButton();
+    setupBattleResultButtons();
     setupInitialSetupOverlay();
     setupLoginOverlay();
     setupChangePasswordModal();

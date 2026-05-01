@@ -536,16 +536,82 @@
             </div><!-- /#screen-battle -->
 
             <!-- ==============================
-                 試合終了画面（準備中）
+                 試合終了画面
                  ============================== -->
             <div id="screen-battleResult" class="game-screen" style="display:none;">
-                <section class="screen-placeholder-section">
-                    <div class="screen-placeholder">
-                        <div class="placeholder-icon">🏁</div>
-                        <h2>試合終了画面</h2>
-                        <p>（準備中）</p>
+
+            <section class="battle-result-section">
+                <h2>🏁 試合終了</h2>
+
+                <!-- 勝敗バナー -->
+                <div class="br-result-banner" id="brResultBanner">
+                    <span id="brResultText">-</span>
+                </div>
+
+                <!-- 試合情報 -->
+                <div class="br-info-card">
+                    <div class="br-info-row">
+                        <span class="label">プレイヤー名:</span>
+                        <span class="value" id="brPlayerName">-</span>
                     </div>
-                </section>
+                    <div class="br-info-row">
+                        <span class="label">プレイヤー戦型:</span>
+                        <span class="value" id="brPlayerStyle">-</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">対戦相手:</span>
+                        <span class="value" id="brCpuName">-</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">相手戦型:</span>
+                        <span class="value" id="brCpuStyle">-</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">自分の総合力:</span>
+                        <span class="value" id="brPlayerPower">-</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">相手の総合力:</span>
+                        <span class="value" id="brCpuPower">-</span>
+                    </div>
+                </div>
+
+                <!-- 獲得EXP・成長結果 -->
+                <div class="br-exp-card">
+                    <div class="br-info-row">
+                        <span class="label">獲得EXP:</span>
+                        <span class="value br-exp-value" id="brExpGained">+0 EXP</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">現在レベル:</span>
+                        <span class="value" id="brPlayerLevel">Lv 1</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">累計EXP:</span>
+                        <span class="value" id="brPlayerExp">0 EXP</span>
+                    </div>
+                    <div class="br-info-row">
+                        <span class="label">通算成績:</span>
+                        <span class="value" id="brRecord">0勝 0敗</span>
+                    </div>
+                </div>
+
+                <!-- バトルログ要約 -->
+                <div class="br-log-card">
+                    <h3>📋 バトルログ</h3>
+                    <div class="battle-log" id="brBattleLog">
+                        <div class="battle-log-entry">試合ログがここに表示されます。</div>
+                    </div>
+                </div>
+
+                <!-- アクションボタン -->
+                <div class="br-buttons">
+                    <button class="battle-btn" id="brPlayAgainBtn">🔄 もう一度試合する</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                </div>
+
+            </section>
+
             </div><!-- /#screen-battleResult -->
 
             <!-- ==============================

@@ -1702,6 +1702,85 @@ section h3 {
 }
 
 
+/* 試合終了画面 */
+.battle-result-section {
+    border-left-color: #f59f00;
+}
+
+.br-result-banner {
+    text-align: center;
+    padding: 20px 16px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.br-win {
+    background: linear-gradient(135deg, #d3f9d8, #b2f2bb);
+    color: #2f9e44;
+    border: 2px solid #8ce99a;
+}
+
+.br-lose {
+    background: linear-gradient(135deg, #ffe3e3, #ffc9c9);
+    color: #e03131;
+    border: 2px solid #ffa8a8;
+}
+
+.br-info-card,
+.br-exp-card,
+.br-log-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.br-log-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #343a40;
+}
+
+.br-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 13px;
+}
+
+.br-info-row:last-child {
+    border-bottom: none;
+}
+
+.br-info-row .label {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.br-info-row .value {
+    color: #343a40;
+    font-weight: 700;
+}
+
+.br-exp-value {
+    color: #f59f00;
+    font-size: 16px;
+}
+
+.br-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 4px;
+}
+
 /* プレースホルダー画面 */
 .screen-placeholder-section {
     border-left-color: #adb5bd;
