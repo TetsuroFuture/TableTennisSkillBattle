@@ -139,7 +139,9 @@ function setupBattleModeSelectButtons() {
 
 const RATED_PROVISIONAL_THRESHOLD = 50;
 const MAX_PROVISIONAL_PENALTY = 500;
+const MAX_OPPONENT_POOL_SIZE = 10;
 let selectedRatedOpponent = null;
+let lastRatedOpponentId = null;
 
 function calculateProvisionalPenalty(ratedMatches) {
     const matches = Math.min(ratedMatches, RATED_PROVISIONAL_THRESHOLD);
@@ -313,7 +315,7 @@ async function findRatedOpponent() {
         const snapshot = await db.collection('players')
             .where('rate', '>=', rateMin)
             .where('rate', '<=', rateMax)
-            .limit(10)
+            .limit(MAX_OPPONENT_POOL_SIZE)
             .get();
 
         const candidates = [];
@@ -327,6 +329,7 @@ async function findRatedOpponent() {
                 Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
             );
             candidates.push({
+                id: doc.id,
                 name: data.name || '匿名選手',
                 style: Number.isFinite(data.style) ? data.style : 0,
                 rate: Number.isFinite(data.rate) ? data.rate : 1500,
@@ -347,7 +350,10 @@ async function findRatedOpponent() {
         candidates.sort((a, b) =>
             Math.abs(a.displayRate - playerDisplayRate) - Math.abs(b.displayRate - playerDisplayRate)
         );
-        return candidates[0];
+        const top10 = candidates.slice(0, MAX_OPPONENT_POOL_SIZE);
+        const filtered = top10.filter(c => c.id !== lastRatedOpponentId);
+        const pool = filtered.length > 0 ? filtered : top10;
+        return pool[Math.floor(Math.random() * pool.length)];
     } catch (error) {
         console.error('Failed to query rated opponents', error);
         return createCpuOpponentForRated(playerDisplayRate);
@@ -378,6 +384,7 @@ async function handleFindRatedOpponent() {
         const opponent = await findRatedOpponent();
         if (opponent) {
             selectedRatedOpponent = opponent;
+            lastRatedOpponentId = opponent.id || null;
             renderRatedOpponentPreview(opponent);
 
             const opponentArea = document.getElementById('ratedOpponentArea');
