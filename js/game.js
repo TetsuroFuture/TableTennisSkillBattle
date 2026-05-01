@@ -56,7 +56,7 @@ let isNewPlayerSetup = false;
 // 画面状態管理
 // ============================================================
 
-const SCREEN_NAMES = ['home', 'training', 'battleModeSelect', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
+const SCREEN_NAMES = ['home', 'training', 'battleModeSelect', 'ratedBattleStart', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
 let currentScreen = 'home';
 
 let battleStartCpu = null;
@@ -83,6 +83,10 @@ function changeScreen(screenName) {
 
     if (screenName === 'battleStart') {
         renderBattleStartScreen();
+    }
+
+    if (screenName === 'ratedBattleStart') {
+        showRatedBattleStartScreen();
     }
 
     if (screenName === 'battleResult') {
@@ -114,7 +118,7 @@ function handleSelectCpuBattle() {
 }
 
 function handleSelectRatedBattle() {
-    changeScreen('battleStart');
+    changeScreen('ratedBattleStart');
 }
 
 function setupBattleModeSelectButtons() {
@@ -126,6 +130,403 @@ function setupBattleModeSelectButtons() {
     const ratedBtn = document.getElementById('selectRatedBattleBtn');
     if (ratedBtn) {
         ratedBtn.addEventListener('click', handleSelectRatedBattle);
+    }
+}
+
+// ============================================================
+// 全国Rate対戦開始画面
+// ============================================================
+
+const RATED_PROVISIONAL_THRESHOLD = 50;
+let selectedRatedOpponent = null;
+
+function calculateEffectiveRate(rate, ratedMatches) {
+    if (ratedMatches >= RATED_PROVISIONAL_THRESHOLD) {
+        return rate;
+    }
+    const t = ratedMatches / RATED_PROVISIONAL_THRESHOLD;
+    return Math.round(1500 + (rate - 1500) * t);
+}
+
+function calculateRateChange(myRate, opponentRate, ratedMatches, isWin) {
+    const K = ratedMatches < RATED_PROVISIONAL_THRESHOLD ? 32 : 16;
+    const expected = 1 / (1 + Math.pow(10, (opponentRate - myRate) / 400));
+    const actual = isWin ? 1 : 0;
+    return Math.round(K * (actual - expected));
+}
+
+function showRatedBattleStartScreen() {
+    renderRatedBattleSummary(player);
+    renderRecentRatedBattleList(currentPlayerId);
+
+    const opponentArea = document.getElementById('ratedOpponentArea');
+    if (opponentArea) {
+        opponentArea.style.display = 'none';
+    }
+
+    const findBtn = document.getElementById('findRatedOpponentBtn');
+    const startBtn = document.getElementById('startRatedBattleBtn');
+    const findAnotherBtn = document.getElementById('findAnotherRatedOpponentBtn');
+    if (findBtn) {
+        findBtn.style.display = '';
+        findBtn.disabled = false;
+    }
+    if (startBtn) {
+        startBtn.style.display = 'none';
+    }
+    if (findAnotherBtn) {
+        findAnotherBtn.style.display = 'none';
+    }
+
+    const statusEl = document.getElementById('ratedSearchStatus');
+    if (statusEl) {
+        statusEl.textContent = '今日の道場破り、誰に挑む？';
+    }
+
+    selectedRatedOpponent = null;
+}
+
+function renderRatedBattleSummary(targetPlayer) {
+    const displayRate = calculateEffectiveRate(targetPlayer.rate, targetPlayer.ratedMatches);
+
+    const rateEl = document.getElementById('ratedDisplayRate');
+    if (rateEl) {
+        rateEl.textContent = displayRate;
+    }
+
+    const matches = targetPlayer.ratedMatches || 0;
+    const wins = targetPlayer.ratedWins || 0;
+    const losses = targetPlayer.ratedLosses || 0;
+    const draws = targetPlayer.ratedDraws || 0;
+
+    const recordEl = document.getElementById('ratedRecord');
+    if (recordEl) {
+        let recordText = `${matches}戦 ${wins}勝${losses}敗`;
+        if (draws > 0) {
+            recordText += `${draws}分`;
+        }
+        recordEl.textContent = recordText;
+    }
+
+    const winRateEl = document.getElementById('ratedWinRate');
+    if (winRateEl) {
+        const decidedMatches = wins + losses + draws;
+        const winRateText = decidedMatches > 0
+            ? `勝率 ${(wins / decidedMatches * 100).toFixed(1)}%`
+            : '勝率 -%';
+        winRateEl.textContent = winRateText;
+    }
+
+    const provisionalEl = document.getElementById('ratedProvisionalArea');
+    if (provisionalEl) {
+        if (matches < RATED_PROVISIONAL_THRESHOLD) {
+            provisionalEl.style.display = '';
+            const remainingEl = document.getElementById('ratedProvisionalRemaining');
+            if (remainingEl) {
+                remainingEl.textContent = `正式Rateまであと${RATED_PROVISIONAL_THRESHOLD - matches}戦`;
+            }
+        } else {
+            provisionalEl.style.display = 'none';
+        }
+    }
+}
+
+async function renderRecentRatedBattleList(playerId) {
+    const listEl = document.getElementById('recentRatedBattleList');
+    const summaryEl = document.getElementById('recentRatedBattleSummary');
+    if (!listEl) {
+        return;
+    }
+
+    if (!isFirebaseReady || !db || !playerId) {
+        listEl.innerHTML = '<p class="rated-no-history">まだRate対戦履歴がありません。<br>最初の道場破りに挑戦しましょう！</p>';
+        if (summaryEl) {
+            summaryEl.style.display = 'none';
+        }
+        return;
+    }
+
+    try {
+        const snapshot = await db.collection('matches')
+            .where('playerId', '==', playerId)
+            .where('mode', '==', 'rated')
+            .orderBy('createdAt', 'desc')
+            .limit(5)
+            .get();
+
+        if (snapshot.empty) {
+            listEl.innerHTML = '<p class="rated-no-history">まだRate対戦履歴がありません。<br>最初の道場破りに挑戦しましょう！</p>';
+            if (summaryEl) {
+                summaryEl.style.display = 'none';
+            }
+            return;
+        }
+
+        let recentWins = 0;
+        let recentLosses = 0;
+        const items = [];
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            const isWin = d.result === 'win';
+            if (isWin) {
+                recentWins += 1;
+            } else {
+                recentLosses += 1;
+            }
+            const marker = isWin ? '○' : '×';
+            const rateChangeVal = d.rateChange;
+            const rateChangeText = Number.isFinite(rateChangeVal)
+                ? (rateChangeVal >= 0 ? ` +${rateChangeVal}` : ` ${rateChangeVal}`)
+                : '';
+            const opponentName = d.enemyName || '不明';
+            items.push(`<div class="rated-history-item ${isWin ? 'win' : 'lose'}">${marker} vs ${opponentName}${rateChangeText}</div>`);
+        });
+
+        listEl.innerHTML = items.join('');
+
+        if (summaryEl) {
+            summaryEl.textContent = `直近成績: ${recentWins}勝${recentLosses}敗`;
+            summaryEl.style.display = '';
+        }
+    } catch (error) {
+        console.error('Failed to load recent rated battles', error);
+        listEl.innerHTML = '<p class="rated-no-history">履歴の読み込みに失敗しました。</p>';
+        if (summaryEl) {
+            summaryEl.style.display = 'none';
+        }
+    }
+}
+
+async function findRatedOpponent() {
+    const playerDisplayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
+
+    if (!isFirebaseReady || !db || !currentPlayerId) {
+        return createCpuOpponentForRated(playerDisplayRate);
+    }
+
+    try {
+        const rateMin = Math.max(100, playerDisplayRate - 300);
+        const rateMax = playerDisplayRate + 300;
+        const snapshot = await db.collection('players')
+            .where('rate', '>=', rateMin)
+            .where('rate', '<=', rateMax)
+            .limit(10)
+            .get();
+
+        const candidates = [];
+        snapshot.forEach(doc => {
+            if (doc.id === currentPlayerId) {
+                return;
+            }
+            const data = doc.data();
+            const oppDisplayRate = calculateEffectiveRate(
+                Number.isFinite(data.rate) ? data.rate : 1500,
+                Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
+            );
+            candidates.push({
+                name: data.name || '匿名選手',
+                style: Number.isFinite(data.style) ? data.style : 0,
+                rate: Number.isFinite(data.rate) ? data.rate : 1500,
+                ratedMatches: Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0,
+                displayRate: oppDisplayRate,
+                atk: Number.isFinite(data.atk) ? data.atk : 10,
+                def: Number.isFinite(data.def) ? data.def : 10,
+                spd: Number.isFinite(data.spd) ? data.spd : 10,
+                tec: Number.isFinite(data.tec) ? data.tec : 10,
+                sta: Number.isFinite(data.sta) ? data.sta : 10
+            });
+        });
+
+        if (candidates.length === 0) {
+            return createCpuOpponentForRated(playerDisplayRate);
+        }
+
+        candidates.sort((a, b) =>
+            Math.abs(a.displayRate - playerDisplayRate) - Math.abs(b.displayRate - playerDisplayRate)
+        );
+        return candidates[0];
+    } catch (error) {
+        console.error('Failed to query rated opponents', error);
+        return createCpuOpponentForRated(playerDisplayRate);
+    }
+}
+
+function createCpuOpponentForRated(targetRate) {
+    const cpu = createCpuOpponent();
+    const offset = Math.round((Math.random() * 60) - 30);
+    cpu.rate = targetRate + offset;
+    cpu.ratedMatches = 50;
+    cpu.displayRate = cpu.rate;
+    return cpu;
+}
+
+async function handleFindRatedOpponent() {
+    const findBtn = document.getElementById('findRatedOpponentBtn');
+    const statusEl = document.getElementById('ratedSearchStatus');
+
+    if (findBtn) {
+        findBtn.disabled = true;
+    }
+    if (statusEl) {
+        statusEl.textContent = '対戦相手を探しています...';
+    }
+
+    try {
+        const opponent = await findRatedOpponent();
+        if (opponent) {
+            selectedRatedOpponent = opponent;
+            renderRatedOpponentPreview(opponent);
+
+            const opponentArea = document.getElementById('ratedOpponentArea');
+            if (opponentArea) {
+                opponentArea.style.display = '';
+            }
+
+            if (findBtn) {
+                findBtn.style.display = 'none';
+            }
+
+            const startBtn = document.getElementById('startRatedBattleBtn');
+            const findAnotherBtn = document.getElementById('findAnotherRatedOpponentBtn');
+            if (startBtn) {
+                startBtn.style.display = '';
+            }
+            if (findAnotherBtn) {
+                findAnotherBtn.style.display = '';
+            }
+
+            if (statusEl) {
+                statusEl.textContent = '道場の相手が現れた！';
+            }
+        } else {
+            if (statusEl) {
+                statusEl.textContent = '対戦相手が見つかりませんでした。';
+            }
+            if (findBtn) {
+                findBtn.disabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to find rated opponent', error);
+        if (statusEl) {
+            statusEl.textContent = '対戦相手の検索に失敗しました。';
+        }
+        if (findBtn) {
+            findBtn.disabled = false;
+        }
+    }
+}
+
+function renderRatedOpponentPreview(opponent) {
+    const nameEl = document.getElementById('ratedOpponentName');
+    const rateEl = document.getElementById('ratedOpponentRate');
+    const styleEl = document.getElementById('ratedOpponentStyle');
+    const diffEl = document.getElementById('ratedRateDiff');
+    const commentEl = document.getElementById('ratedOpponentComment');
+
+    const playerDisplayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
+    const opponentDisplayRate = Number.isFinite(opponent.displayRate)
+        ? opponent.displayRate
+        : calculateEffectiveRate(opponent.rate || 1500, opponent.ratedMatches || 0);
+    const rateDiff = opponentDisplayRate - playerDisplayRate;
+
+    if (nameEl) {
+        nameEl.textContent = opponent.name;
+    }
+    if (rateEl) {
+        rateEl.textContent = `Rate ${opponentDisplayRate}`;
+    }
+    if (styleEl) {
+        const styleName = Number.isFinite(opponent.style) && styles[opponent.style]
+            ? styles[opponent.style].name
+            : '不明';
+        styleEl.textContent = `戦型: ${styleName}`;
+    }
+
+    if (diffEl) {
+        const diffText = rateDiff >= 0 ? `Rate差: +${rateDiff}` : `Rate差: ${rateDiff}`;
+        let tierText;
+        if (rateDiff >= 200) {
+            tierText = '強敵です！';
+        } else if (rateDiff >= 100) {
+            tierText = '格上の相手です';
+        } else if (rateDiff > -100) {
+            tierText = '同格の相手です';
+        } else if (rateDiff > -200) {
+            tierText = '格下の相手です';
+        } else {
+            tierText = '取りこぼし注意！';
+        }
+        diffEl.innerHTML = `${diffText}<br><span class="rated-tier-label">${tierText}</span>`;
+    }
+
+    if (commentEl) {
+        let comment;
+        if (rateDiff >= 100) {
+            comment = '勝てば大きな一歩。';
+        } else if (rateDiff > -100) {
+            comment = '腕試しにはちょうどいい相手です。';
+        } else {
+            comment = '油断は禁物。勝ち切ろう。';
+        }
+        commentEl.textContent = comment;
+    }
+}
+
+function handleStartRatedBattle() {
+    if (!selectedRatedOpponent) {
+        addLog('対戦相手を選んでください。', 'warning');
+        return;
+    }
+
+    if (player.style === null) {
+        addLog('試合前に戦型を選択してください！', 'warning');
+        changeScreen('home');
+        return;
+    }
+
+    updateCurrentModeLabel('rated');
+
+    const result = simulateBattleWithOptions({
+        mode: 'rated',
+        tacticId: selectedTacticId,
+        enemy: selectedRatedOpponent
+    });
+
+    const playerDisplayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
+    const opponentDisplayRate = Number.isFinite(selectedRatedOpponent.displayRate)
+        ? selectedRatedOpponent.displayRate
+        : calculateEffectiveRate(selectedRatedOpponent.rate || 1500, selectedRatedOpponent.ratedMatches || 0);
+    const rateChange = calculateRateChange(playerDisplayRate, opponentDisplayRate, player.ratedMatches, result.isPlayerWin);
+
+    player.ratedMatches = (player.ratedMatches || 0) + 1;
+    if (result.isPlayerWin) {
+        player.ratedWins = (player.ratedWins || 0) + 1;
+    } else {
+        player.ratedLosses = (player.ratedLosses || 0) + 1;
+    }
+    player.rate = (player.rate || 1500) + rateChange;
+    player.lastRatedBattleAt = new Date();
+
+    result.rateChange = rateChange;
+
+    applyMatchResult(result);
+}
+
+function setupRatedBattleStartButtons() {
+    const findBtn = document.getElementById('findRatedOpponentBtn');
+    if (findBtn) {
+        findBtn.addEventListener('click', handleFindRatedOpponent);
+    }
+
+    const startBtn = document.getElementById('startRatedBattleBtn');
+    if (startBtn) {
+        startBtn.addEventListener('click', handleStartRatedBattle);
+    }
+
+    const findAnotherBtn = document.getElementById('findAnotherRatedOpponentBtn');
+    if (findAnotherBtn) {
+        findAnotherBtn.addEventListener('click', handleFindRatedOpponent);
     }
 }
 
@@ -493,6 +894,7 @@ async function saveMatchResult(matchResult) {
             expGained: matchResult.expGained,
             roundsWon: Number.isFinite(matchResult.roundsWon) ? matchResult.roundsWon : null,
             isChampion: Boolean(matchResult.isChampion),
+            rateChange: Number.isFinite(matchResult.rateChange) ? matchResult.rateChange : null,
             log: Array.isArray(matchResult.log) ? matchResult.log : [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
@@ -857,7 +1259,8 @@ const sameCategoryAdvantage = {
 const gameModes = {
     practice: '練習試合',
     rival: 'ライバル戦',
-    tournament: '大会モード'
+    tournament: '大会モード',
+    rated: '全国Rate対戦'
 };
 
 const tactics = [
@@ -1553,6 +1956,10 @@ function calculateExpReward(mode, result, options = {}) {
             return 85;
         }
         return result === 'win' ? 35 : 15;
+    }
+
+    if (mode === 'rated') {
+        return result === 'win' ? 40 : 20;
     }
 
     return result === 'win' ? 30 : 15;
@@ -2487,7 +2894,8 @@ function applyMatchResult(result) {
         result: result.result,
         winRate: Number(result.finalWinRate.toFixed(4)),
         expGained,
-        log: result.battleLines
+        log: result.battleLines,
+        rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null
     };
 
     saveMatchResult(matchResult).then(saved => {
@@ -3522,6 +3930,7 @@ async function initGame() {
     setupConfirmStartBattleButton();
     setupTournamentButton();
     setupBattleModeSelectButtons();
+    setupRatedBattleStartButtons();
     setupTacticSelect();
     setupRivalButtons();
     setupDebugSkillButton();
