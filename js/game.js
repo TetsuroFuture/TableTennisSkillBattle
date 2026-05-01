@@ -595,6 +595,17 @@ function renderBattleResultScreen() {
     setEl('brPlayerExp', `${r.playerExp} EXP`);
     setEl('brRecord', `${r.playerWins}勝 ${r.playerLosses}敗`);
 
+    const rateChangeRow = document.getElementById('brRateChangeRow');
+    if (rateChangeRow) {
+        if (r.mode === 'rated' && r.rateChange !== null) {
+            const rateChangeText = r.rateChange >= 0 ? `+${r.rateChange}` : `${r.rateChange}`;
+            setEl('brRateChange', rateChangeText);
+            rateChangeRow.style.display = '';
+        } else {
+            rateChangeRow.style.display = 'none';
+        }
+    }
+
     const logEl = document.getElementById('brBattleLog');
     if (logEl) {
         logEl.innerHTML = r.battleLines
@@ -2921,7 +2932,9 @@ function applyMatchResult(result) {
         playerLevel: player.level,
         playerExp: player.exp,
         playerWins: player.wins,
-        playerLosses: player.losses
+        playerLosses: player.losses,
+        mode: result.mode || 'practice',
+        rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null
     };
     changeScreen('battleResult');
 }
@@ -3205,7 +3218,11 @@ function setupBattleResultButtons() {
     const playAgainBtn = document.getElementById('brPlayAgainBtn');
     if (playAgainBtn) {
         playAgainBtn.addEventListener('click', function() {
-            changeScreen('battleStart');
+            if (lastBattleResult && lastBattleResult.mode === 'rated') {
+                changeScreen('ratedBattleStart');
+            } else {
+                changeScreen('battleStart');
+            }
         });
     }
 }
