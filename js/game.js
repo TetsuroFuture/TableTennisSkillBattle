@@ -6,6 +6,45 @@
 const LOCAL_PLAYER_ID_KEY = 'ttsb_player_id';
 const LOCAL_SETUP_COMPLETE_KEY = 'ttsb_setup_complete';
 
+// ============================================================
+// バランス調整定数
+// ============================================================
+
+const BALANCE_CONFIG = {
+  exp: {
+    base: 10,
+    winBonus: 14,
+    loseBonus: 4,
+    drawBonus: 8,
+    closeMatchBonus: 3,
+    maxPerBattle: 32
+  },
+
+  growth: {
+    baseStat: 50,
+    maxEffectiveGain: 50,
+    growthRate: 45,
+    rawStatSoftCap: 120
+  },
+
+  skill: {
+    maxLevel: 5,
+    requiredExp: {
+      1: 0,
+      2: 40,
+      3: 100,
+      4: 200,
+      5: 360
+    }
+  },
+
+  battle: {
+    statWeight: 0.65,
+    skillWeight: 0.25,
+    styleAffinityWeight: 0.10
+  }
+};
+
 let db = null;
 let isFirebaseReady = false;
 let currentPlayerId = null;
@@ -2570,7 +2609,7 @@ function setupStyleButtons() {
 
 function setupTrainingButtons() {
     const trainingButtons = document.querySelectorAll('.training-btn');
-    const expCost = 10;
+    const expCost = BALANCE_CONFIG.exp.base;
 
     trainingButtons.forEach(button => {
         button.addEventListener('click', function() {
