@@ -1854,6 +1854,24 @@ section h3 {
     font-size: 16px;
 }
 
+.br-rate-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c757d;
+    margin-bottom: 6px;
+}
+
+.br-rate-transition {
+    font-size: 18px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 8px;
+}
+
+.br-rate-arrow {
+    color: #868e96;
+}
+
 .br-buttons {
     display: flex;
     flex-direction: column;
