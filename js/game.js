@@ -20,6 +20,8 @@ let isNewPlayerSetup = false;
 const SCREEN_NAMES = ['home', 'training', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
 let currentScreen = 'home';
 
+let battleStartCpu = null;
+
 function changeScreen(screenName) {
     if (!SCREEN_NAMES.includes(screenName)) {
         console.warn('changeScreen: 不明な画面名:', screenName);
@@ -38,6 +40,10 @@ function changeScreen(screenName) {
     });
 
     currentScreen = screenName;
+
+    if (screenName === 'battleStart') {
+        renderBattleStartScreen();
+    }
 }
 
 function setupNavButtons() {
@@ -49,6 +55,30 @@ function setupNavButtons() {
             }
         });
     });
+}
+
+function renderBattleStartScreen() {
+    const playerNameEl = document.getElementById('bsPlayerName');
+    const playerStyleEl = document.getElementById('bsPlayerStyle');
+    const playerStatsEl = document.getElementById('bsPlayerStats');
+    const cpuNameEl = document.getElementById('bsCpuName');
+    const cpuStyleEl = document.getElementById('bsCpuStyle');
+    const cpuStatsEl = document.getElementById('bsCpuStats');
+
+    if (!playerNameEl) {
+        return;
+    }
+
+    playerNameEl.textContent = player.name;
+    playerStyleEl.textContent = player.style !== null ? styles[player.style].name : '未選択';
+    playerStatsEl.textContent =
+        `ATK: ${player.atk}  DEF: ${player.def}  SPD: ${player.spd}  TEC: ${player.tec}  STA: ${player.sta}`;
+
+    battleStartCpu = createCpuOpponent();
+    cpuNameEl.textContent = battleStartCpu.name;
+    cpuStyleEl.textContent = styles[battleStartCpu.style].name;
+    cpuStatsEl.textContent =
+        `ATK: ${battleStartCpu.atk}  DEF: ${battleStartCpu.def}  SPD: ${battleStartCpu.spd}  TEC: ${battleStartCpu.tec}  STA: ${battleStartCpu.sta}`;
 }
 
 // ============================================================
@@ -2482,6 +2512,30 @@ function setupBattleButton() {
     });
 }
 
+function setupConfirmStartBattleButton() {
+    const btn = document.getElementById('confirmStartBattleBtn');
+    if (!btn) {
+        return;
+    }
+
+    btn.addEventListener('click', function() {
+        if (player.style === null) {
+            addLog('試合前に戦型を選択してください！', 'warning');
+            changeScreen('home');
+            return;
+        }
+
+        updateCurrentModeLabel('practice');
+        const result = simulateBattleWithOptions({
+            mode: 'practice',
+            tacticId: selectedTacticId,
+            enemy: battleStartCpu || undefined
+        });
+        applyMatchResult(result);
+        changeScreen('battle');
+    });
+}
+
 function setupTournamentButton() {
     const tournamentButton = document.getElementById('startTournamentBtn');
     if (!tournamentButton) {
@@ -3210,6 +3264,7 @@ async function initGame() {
     setupTrainingButtons();
     setupSkillButtons();
     setupBattleButton();
+    setupConfirmStartBattleButton();
     setupTournamentButton();
     setupTacticSelect();
     setupRivalButtons();
