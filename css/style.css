@@ -1639,6 +1639,69 @@ section h3 {
     color: #444;
 }
 
+/* 試合開始画面 */
+.battle-start-section {
+    border-left-color: #ff922b;
+}
+
+.battle-start-matchup {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.battle-start-card {
+    flex: 1;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 14px 12px;
+}
+
+.battle-start-card.player-card {
+    border-left: 4px solid #4263eb;
+}
+
+.battle-start-card.cpu-card {
+    border-left: 4px solid #e03131;
+}
+
+.battle-start-card h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: #343a40;
+}
+
+.bs-stats-summary {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #495057;
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 8px;
+    line-height: 1.8;
+    word-break: break-all;
+}
+
+.battle-start-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 900;
+    color: #ff922b;
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+
+.battle-start-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+
 /* プレースホルダー画面 */
 .screen-placeholder-section {
     border-left-color: #adb5bd;

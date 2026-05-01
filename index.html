@@ -391,6 +391,54 @@
                  ============================== -->
             <div id="screen-battleStart" class="game-screen" style="display:none;">
 
+            <section class="battle-start-section">
+                <h2>⚔️ 試合開始</h2>
+
+                <div class="battle-start-matchup">
+                    <!-- プレイヤー情報 -->
+                    <div class="battle-start-card player-card">
+                        <h3>👤 あなた</h3>
+                        <div class="info-row">
+                            <span class="label">選手名:</span>
+                            <span class="value" id="bsPlayerName">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">戦型:</span>
+                            <span class="value" id="bsPlayerStyle">-</span>
+                        </div>
+                        <div class="bs-stats-summary" id="bsPlayerStats">-</div>
+                    </div>
+
+                    <div class="battle-start-vs">VS</div>
+
+                    <!-- 対戦相手情報 -->
+                    <div class="battle-start-card cpu-card">
+                        <h3>🤖 対戦相手</h3>
+                        <div class="info-row">
+                            <span class="label">選手名:</span>
+                            <span class="value" id="bsCpuName">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">戦型:</span>
+                            <span class="value" id="bsCpuStyle">-</span>
+                        </div>
+                        <div class="bs-stats-summary" id="bsCpuStats">-</div>
+                    </div>
+                </div>
+
+                <div class="battle-start-buttons">
+                    <button class="battle-btn" id="confirmStartBattleBtn">▶ 試合開始</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                </div>
+            </section>
+
+            </div><!-- /#screen-battleStart -->
+
+            <!-- ==============================
+                 試合画面
+                 ============================== -->
+            <div id="screen-battle" class="game-screen" style="display:none;">
+
             <!-- 自動バトルセクション -->
             <section class="battle-section">
                 <h2>自動バトル</h2>
@@ -480,19 +528,11 @@
                 </div>
             </section>
 
-            </div><!-- /#screen-battleStart -->
+            <!-- HOMEへ戻るボタン -->
+            <div class="settings-back-row">
+                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+            </div>
 
-            <!-- ==============================
-                 試合画面（準備中）
-                 ============================== -->
-            <div id="screen-battle" class="game-screen" style="display:none;">
-                <section class="screen-placeholder-section">
-                    <div class="screen-placeholder">
-                        <div class="placeholder-icon">⚔️</div>
-                        <h2>試合画面</h2>
-                        <p>（準備中）</p>
-                    </div>
-                </section>
             </div><!-- /#screen-battle -->
 
             <!-- ==============================
