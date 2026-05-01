@@ -701,8 +701,17 @@
                         <span class="value" id="brRecord">0勝 0敗</span>
                     </div>
                     <div class="br-info-row" id="brRateChangeRow" style="display:none;">
-                        <span class="label">Rate変動:</span>
-                        <span class="value br-rate-change-value" id="brRateChange">-</span>
+                        <div class="br-rate-section-title">Rate</div>
+                        <div class="br-rate-transition">
+                            <span id="brRateBefore">-</span>
+                            <span class="br-rate-arrow"> → </span>
+                            <span id="brRateAfter">-</span>
+                            （<span id="brRateChange">-</span>）
+                        </div>
+                        <div class="rated-provisional-area" id="brProvisionalArea" style="display:none;">
+                            <div class="rated-provisional-badge">暫定Rate期間中</div>
+                            <div class="rated-provisional-remaining" id="brProvisionalRemaining"></div>
+                        </div>
                     </div>
                 </div>
 

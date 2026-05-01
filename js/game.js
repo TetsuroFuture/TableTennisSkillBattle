@@ -499,6 +499,8 @@ function handleStartRatedBattle() {
         : calculateEffectiveRate(selectedRatedOpponent.rate || 1500, selectedRatedOpponent.ratedMatches || 0);
     const rateChange = calculateRateChange(playerDisplayRate, opponentDisplayRate, player.ratedMatches, result.isPlayerWin);
 
+    const displayRateBefore = playerDisplayRate;
+
     player.ratedMatches = (player.ratedMatches || 0) + 1;
     if (result.isPlayerWin) {
         player.ratedWins = (player.ratedWins || 0) + 1;
@@ -508,7 +510,12 @@ function handleStartRatedBattle() {
     player.rate = (player.rate || 1500) + rateChange;
     player.lastRatedBattleAt = new Date();
 
+    const displayRateAfter = calculateEffectiveRate(player.rate, player.ratedMatches);
+
     result.rateChange = rateChange;
+    result.displayRateBefore = displayRateBefore;
+    result.displayRateAfter = displayRateAfter;
+    result.ratedMatchesAfter = player.ratedMatches;
 
     applyMatchResult(result);
 }
@@ -600,7 +607,22 @@ function renderBattleResultScreen() {
         if (r.mode === 'rated' && r.rateChange !== null) {
             const rateChangeText = r.rateChange >= 0 ? `+${r.rateChange}` : `${r.rateChange}`;
             setEl('brRateChange', rateChangeText);
+            setEl('brRateBefore', Number.isFinite(r.displayRateBefore) ? r.displayRateBefore : '-');
+            setEl('brRateAfter', Number.isFinite(r.displayRateAfter) ? r.displayRateAfter : '-');
             rateChangeRow.style.display = '';
+
+            const provisionalArea = document.getElementById('brProvisionalArea');
+            if (provisionalArea) {
+                if (Number.isFinite(r.ratedMatchesAfter) && r.ratedMatchesAfter < RATED_PROVISIONAL_THRESHOLD) {
+                    provisionalArea.style.display = '';
+                    const remainingEl = document.getElementById('brProvisionalRemaining');
+                    if (remainingEl) {
+                        remainingEl.textContent = `正式Rateまであと${RATED_PROVISIONAL_THRESHOLD - r.ratedMatchesAfter}戦`;
+                    }
+                } else {
+                    provisionalArea.style.display = 'none';
+                }
+            }
         } else {
             rateChangeRow.style.display = 'none';
         }
@@ -2934,7 +2956,10 @@ function applyMatchResult(result) {
         playerWins: player.wins,
         playerLosses: player.losses,
         mode: result.mode || 'practice',
-        rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null
+        rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null,
+        displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
+        displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
+        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null
     };
     changeScreen('battleResult');
 }
