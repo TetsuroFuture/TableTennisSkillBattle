@@ -2224,6 +2224,8 @@ function renderUnifiedSkillList() {
     container.innerHTML = itemsHtml;
 }
 
+// Backward-compatibility wrapper: the unified skill list replaces the old
+// separate owned/equipped lists, so this function now delegates to renderUnifiedSkillList().
 function renderOwnedSkills() {
     renderUnifiedSkillList();
 }
