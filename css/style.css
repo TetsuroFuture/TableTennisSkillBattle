@@ -36,13 +36,13 @@ body {
 .header {
     background: linear-gradient(180deg, #000000 0%, #0a1a2e 100%);
     color: white;
-    padding: 12px 16px;
+    padding: 12px 0;
     text-align: center;
 }
 
 .header-logo {
     width: 100%;
-    max-width: 420px;
+    max-width: 100%;
     height: auto;
     display: block;
     margin: 0 auto;
