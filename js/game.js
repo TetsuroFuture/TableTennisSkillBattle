@@ -3730,6 +3730,31 @@ async function loginWithNameAndPassword(name, password) {
     }
 }
 
+function showTopScreen() {
+    const topScreen = document.getElementById('top-screen');
+    if (topScreen) {
+        topScreen.style.display = 'block';
+    }
+}
+
+function hideTopScreen() {
+    const topScreen = document.getElementById('top-screen');
+    if (topScreen) {
+        topScreen.style.display = 'none';
+    }
+}
+
+function setupStartButton() {
+    const startBtn = document.getElementById('startBtn');
+    if (!startBtn) {
+        return;
+    }
+    startBtn.addEventListener('click', function() {
+        hideTopScreen();
+        showLoginOverlay();
+    }, { once: true });
+}
+
 function showLoginOverlay() {
     const overlay = document.getElementById('loginOverlay');
     if (overlay) {
@@ -4083,6 +4108,7 @@ async function initGame() {
     setupChangePasswordModal();
     setupLogoutButton();
     setupNavButtons();
+    setupStartButton();
     changeScreen('home');
 
     const existingPlayerId = localStorage.getItem(LOCAL_PLAYER_ID_KEY);
@@ -4100,7 +4126,7 @@ async function initGame() {
 
         addLog('ゲーム開始！戦型を選択して育成を開始してください。', 'info');
     } else {
-        showLoginOverlay();
+        showTopScreen();
     }
 }
 
