@@ -2306,6 +2306,15 @@ section h3 {
     background: #050510;
     z-index: 9999;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+}
+
+.top-screen-inner {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 100%;
 }
 
 .top-hero-image {
