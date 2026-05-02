@@ -2179,19 +2179,29 @@ function updatePlayerInfo() {
 }
 
 // ステータスを表示・更新
+// 【原因と対策】c8cfe4e（HOME画面の選手情報削除）で statAtk 等の要素が
+// index.html から削除されたが、この関数の getElementById 呼び出しに null
+// チェックが漏れていたため、戻り値が null の場合に TypeError が発生していた。
+// TypeError は renderAll() → initGame() を経由して伝播し、
+// setupNavButtons() が呼ばれないままとなり、すべてのメニューボタンで
+// 画面遷移が機能しなくなっていた（ディグレード）。
+// 対策: renderTrainingScreen() と同様に、要素が存在する場合のみ更新する
+// null ガードを追加した。また バー幅が 100% を超えないよう Math.min(100, ...)
+// でクランプしている（renderTrainingScreen と同じ実装）。
 function updateStats() {
-    document.getElementById('statAtk').textContent = player.atk;
-    document.getElementById('statDef').textContent = player.def;
-    document.getElementById('statSpd').textContent = player.spd;
-    document.getElementById('statTec').textContent = player.tec;
-    document.getElementById('statSta').textContent = player.sta;
-
     const maxStat = 50;
-    document.getElementById('atkBar').style.width = (player.atk / maxStat * 100) + '%';
-    document.getElementById('defBar').style.width = (player.def / maxStat * 100) + '%';
-    document.getElementById('spdBar').style.width = (player.spd / maxStat * 100) + '%';
-    document.getElementById('tecBar').style.width = (player.tec / maxStat * 100) + '%';
-    document.getElementById('staBar').style.width = (player.sta / maxStat * 100) + '%';
+    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
+    statKeys.forEach(label => {
+        const key = label.toLowerCase();
+        const valEl = document.getElementById('stat' + label);
+        if (valEl) {
+            valEl.textContent = player[key];
+        }
+        const barEl = document.getElementById(key + 'Bar');
+        if (barEl) {
+            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
+        }
+    });
 }
 
 // ============================================================
