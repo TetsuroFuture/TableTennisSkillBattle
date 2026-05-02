@@ -139,6 +139,7 @@ function setupBattleModeSelectButtons() {
 
 const RATED_PROVISIONAL_THRESHOLD = 50;
 const MAX_PROVISIONAL_PENALTY = 500;
+const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
 let selectedRatedOpponent = null;
 let lastRatedOpponentId = null;
@@ -185,11 +186,10 @@ function calculateEffectiveRate(rate, ratedMatches) {
     return rate - calculateProvisionalPenalty(ratedMatches);
 }
 
-function calculateRateChange(myRate, opponentRate, ratedMatches, isWin) {
-    const K = ratedMatches < RATED_PROVISIONAL_THRESHOLD ? 32 : 16;
+function calculateRateChange(myRate, opponentRate, isWin) {
     const expected = 1 / (1 + Math.pow(10, (opponentRate - myRate) / 400));
     const actual = isWin ? 1 : 0;
-    return Math.round(K * (actual - expected));
+    return Math.round(RATING_K_FACTOR * (actual - expected));
 }
 
 function showRatedBattleStartScreen() {
@@ -369,7 +369,7 @@ async function findRatedOpponent() {
 
     try {
         const rateMin = Math.max(100, playerDisplayRate - 300);
-        const rateMax = playerDisplayRate + 300;
+        const rateMax = playerDisplayRate + 300 + MAX_PROVISIONAL_PENALTY;
         const snapshot = await db.collection('players')
             .where('rate', '>=', rateMin)
             .where('rate', '<=', rateMax)
@@ -560,7 +560,7 @@ function handleStartRatedBattle() {
     const opponentDisplayRate = Number.isFinite(selectedRatedOpponent.displayRate)
         ? selectedRatedOpponent.displayRate
         : calculateEffectiveRate(selectedRatedOpponent.rate || 1500, selectedRatedOpponent.ratedMatches || 0);
-    const rateChange = calculateRateChange(playerDisplayRate, opponentDisplayRate, player.ratedMatches, result.isPlayerWin);
+    const rateChange = calculateRateChange(playerDisplayRate, opponentDisplayRate, result.isPlayerWin);
 
     const displayRateBefore = playerDisplayRate;
 
@@ -571,12 +571,10 @@ function handleStartRatedBattle() {
         player.ratedLosses = (player.ratedLosses || 0) + 1;
     }
     player.rate = (player.rate || 1500) + rateChange;
-    if (player.rate > (player.maxRate || 0)) {
-        player.maxRate = player.rate;
-    }
     player.lastRatedBattleAt = new Date();
 
     const displayRateAfter = calculateEffectiveRate(player.rate, player.ratedMatches);
+    player.maxRate = Number.isFinite(player.maxRate) ? Math.max(player.maxRate, displayRateAfter) : displayRateAfter;
 
     result.rateChange = displayRateAfter - displayRateBefore;
     result.displayRateBefore = displayRateBefore;
@@ -820,7 +818,12 @@ function normalizePlayerData(data, playerId) {
         wins: Number.isFinite(data?.wins) ? data.wins : 0,
         losses: Number.isFinite(data?.losses) ? data.losses : 0,
         rate: Number.isFinite(data?.rate) ? data.rate : 1500,
-        maxRate: Number.isFinite(data?.maxRate) ? data.maxRate : (Number.isFinite(data?.rate) ? data.rate : 1500),
+        maxRate: Number.isFinite(data?.maxRate)
+            ? data.maxRate
+            : calculateEffectiveRate(
+                Number.isFinite(data?.rate) ? data.rate : 1500,
+                Number.isFinite(data?.ratedMatches) ? data.ratedMatches : 0
+            ),
         ratedMatches: Number.isFinite(data?.ratedMatches) ? data.ratedMatches : 0,
         ratedWins: Number.isFinite(data?.ratedWins) ? data.ratedWins : 0,
         ratedLosses: Number.isFinite(data?.ratedLosses) ? data.ratedLosses : 0,
@@ -860,7 +863,12 @@ function mapPlayerToFirestoreData(targetPlayer, playerId) {
         wins: Number.isFinite(targetPlayer.wins) ? targetPlayer.wins : 0,
         losses: Number.isFinite(targetPlayer.losses) ? targetPlayer.losses : 0,
         rate: Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500,
-        maxRate: Number.isFinite(targetPlayer.maxRate) ? targetPlayer.maxRate : (Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500),
+        maxRate: Number.isFinite(targetPlayer.maxRate)
+            ? targetPlayer.maxRate
+            : calculateEffectiveRate(
+                Number.isFinite(targetPlayer.rate) ? targetPlayer.rate : 1500,
+                Number.isFinite(targetPlayer.ratedMatches) ? targetPlayer.ratedMatches : 0
+            ),
         ratedMatches: Number.isFinite(targetPlayer.ratedMatches) ? targetPlayer.ratedMatches : 0,
         ratedWins: Number.isFinite(targetPlayer.ratedWins) ? targetPlayer.ratedWins : 0,
         ratedLosses: Number.isFinite(targetPlayer.ratedLosses) ? targetPlayer.ratedLosses : 0,
@@ -1063,7 +1071,7 @@ const player = {
     wins: 0,
     losses: 0,
     rate: 1500,
-    maxRate: 1500,
+    maxRate: 1000,
     ratedMatches: 0,
     ratedWins: 0,
     ratedLosses: 0,
@@ -2548,7 +2556,9 @@ function renderDataScreen() {
 
     const dataMaxRate = document.getElementById('dataMaxRate');
     if (dataMaxRate) {
-        const maxRate = player.maxRate || player.rate || 1500;
+        const maxRate = Number.isFinite(player.maxRate)
+            ? player.maxRate
+            : calculateEffectiveRate(player.rate || 1500, player.ratedMatches || 0);
         dataMaxRate.textContent = `(最高: ${maxRate})`;
     }
 
