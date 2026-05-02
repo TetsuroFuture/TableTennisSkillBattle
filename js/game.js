@@ -142,6 +142,38 @@ const MAX_PROVISIONAL_PENALTY = 500;
 const MAX_OPPONENT_POOL_SIZE = 10;
 let selectedRatedOpponent = null;
 let lastRatedOpponentId = null;
+let recentRatedWins = 0;
+let recentRatedLosses = 0;
+
+function getRatedBattleCatchCopy(context) {
+    const { phase, rateDiff, recentWins, recentLosses } = context || {};
+
+    if (phase === 'start') {
+        const totalRecent = (recentWins || 0) + (recentLosses || 0);
+        if (totalRecent === 0) {
+            return '最初の一戦が、君の伝説の始まり。';
+        }
+        if ((recentWins || 0) >= 3) {
+            return 'いい流れです。このまま駆け上がろう。';
+        }
+        if ((recentLosses || 0) >= 3) {
+            return '負けから見える、次の一手。';
+        }
+        return '今日の道場破り、誰に挑む？';
+    }
+
+    if (phase === 'opponentFound') {
+        if (rateDiff >= 100) {
+            return '強敵こそ、成長のチャンス。';
+        }
+        if (rateDiff > -100) {
+            return '腕試しにはちょうどいい相手です。';
+        }
+        return '油断は禁物。勝ち切ろう。';
+    }
+
+    return '今日の道場破り';
+}
 
 function calculateProvisionalPenalty(ratedMatches) {
     const matches = Math.min(ratedMatches, RATED_PROVISIONAL_THRESHOLD);
@@ -185,7 +217,11 @@ function showRatedBattleStartScreen() {
 
     const statusEl = document.getElementById('ratedSearchStatus');
     if (statusEl) {
-        statusEl.textContent = '今日の道場破り、誰に挑む？';
+        statusEl.textContent = getRatedBattleCatchCopy({
+            phase: 'start',
+            recentWins: recentRatedWins,
+            recentLosses: recentRatedLosses
+        });
     }
 
     selectedRatedOpponent = null;
@@ -244,10 +280,13 @@ async function renderRecentRatedBattleList(playerId) {
     }
 
     if (!isFirebaseReady || !db || !playerId) {
+        recentRatedWins = 0;
+        recentRatedLosses = 0;
         listEl.innerHTML = '<p class="rated-no-history">まだRate対戦履歴がありません。<br>最初の道場破りに挑戦しましょう！</p>';
         if (summaryEl) {
             summaryEl.style.display = 'none';
         }
+        updateRatedBattleSubtitle();
         return;
     }
 
@@ -260,10 +299,13 @@ async function renderRecentRatedBattleList(playerId) {
             .get();
 
         if (snapshot.empty) {
+            recentRatedWins = 0;
+            recentRatedLosses = 0;
             listEl.innerHTML = '<p class="rated-no-history">まだRate対戦履歴がありません。<br>最初の道場破りに挑戦しましょう！</p>';
             if (summaryEl) {
                 summaryEl.style.display = 'none';
             }
+            updateRatedBattleSubtitle();
             return;
         }
 
@@ -287,12 +329,16 @@ async function renderRecentRatedBattleList(playerId) {
             items.push(`<div class="rated-history-item ${isWin ? 'win' : 'lose'}">${marker} vs ${opponentName}${rateChangeText}</div>`);
         });
 
+        recentRatedWins = recentWins;
+        recentRatedLosses = recentLosses;
         listEl.innerHTML = items.join('');
 
         if (summaryEl) {
             summaryEl.textContent = `直近成績: ${recentWins}勝${recentLosses}敗`;
             summaryEl.style.display = '';
         }
+
+        updateRatedBattleSubtitle();
     } catch (error) {
         console.error('Failed to load recent rated battles', error);
         listEl.innerHTML = '<p class="rated-no-history">履歴の読み込みに失敗しました。</p>';
@@ -300,6 +346,18 @@ async function renderRecentRatedBattleList(playerId) {
             summaryEl.style.display = 'none';
         }
     }
+}
+
+function updateRatedBattleSubtitle() {
+    const subtitleEl = document.getElementById('ratedBattleSubtitle');
+    if (!subtitleEl) {
+        return;
+    }
+    subtitleEl.textContent = getRatedBattleCatchCopy({
+        phase: 'start',
+        recentWins: recentRatedWins,
+        recentLosses: recentRatedLosses
+    });
 }
 
 async function findRatedOpponent() {
@@ -471,15 +529,10 @@ function renderRatedOpponentPreview(opponent) {
     }
 
     if (commentEl) {
-        let comment;
-        if (rateDiff >= 100) {
-            comment = '勝てば大きな一歩。';
-        } else if (rateDiff > -100) {
-            comment = '腕試しにはちょうどいい相手です。';
-        } else {
-            comment = '油断は禁物。勝ち切ろう。';
-        }
-        commentEl.textContent = comment;
+        commentEl.textContent = getRatedBattleCatchCopy({
+            phase: 'opponentFound',
+            rateDiff
+        });
     }
 }
 
