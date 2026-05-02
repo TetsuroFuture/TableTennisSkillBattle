@@ -1626,6 +1626,18 @@ section h3 {
     /* JSで display を切り替えるため基本はブロック */
 }
 
+/* HOME画面: メインビジュアル */
+.home-visual {
+    width: 100%;
+    margin-bottom: 16px;
+}
+
+.home-visual-img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
 /* HOME画面: メニューセクション */
 .home-menu-section {
     border-left-color: #ffd43b;

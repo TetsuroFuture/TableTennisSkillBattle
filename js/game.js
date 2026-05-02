@@ -2212,25 +2212,6 @@ function updateStyleInfo() {
 }
 
 function renderHomeScreen() {
-    const homePlayerName = document.getElementById('homePlayerName');
-    if (homePlayerName) {
-        homePlayerName.textContent = player.name;
-    }
-
-    const homeStyleName = document.getElementById('homeStyleName');
-    if (homeStyleName) {
-        homeStyleName.textContent = player.style !== null ? styles[player.style].name : '未選択';
-    }
-
-    const homeStyleDesc = document.getElementById('homeStyleDesc');
-    if (homeStyleDesc) {
-        homeStyleDesc.textContent = player.style !== null ? styles[player.style].description : '';
-    }
-
-    const homePlayerExp = document.getElementById('homePlayerExp');
-    if (homePlayerExp) {
-        homePlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
-    }
 }
 
 function renderUnifiedSkillList() {
