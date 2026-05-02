@@ -2294,3 +2294,62 @@ section h3 {
     background: linear-gradient(135deg, #d9480f 0%, #c0390a 100%);
 }
 
+/* ==========================================================
+   TOP画面（未ログイン時・ログアウト後のみ表示）
+   ========================================================== */
+
+.top-screen {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: #050510;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.top-hero-image {
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+.top-screen-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 16px 28px;
+    pointer-events: none;
+}
+
+.start-button {
+    pointer-events: auto;
+    width: min(86%, 360px);
+    padding: 16px 24px;
+    border: 0;
+    border-radius: 999px;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #111;
+    background: linear-gradient(180deg, #ffe66d, #ffb000);
+    box-shadow: 0 0 24px rgba(255, 190, 0, 0.65);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.start-button:active {
+    transform: scale(0.98);
+}
+
+@media (min-width: 600px) {
+    .top-hero-image {
+        height: 100vh;
+        object-position: center center;
+    }
+}
+
