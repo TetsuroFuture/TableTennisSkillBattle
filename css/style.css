@@ -2374,3 +2374,244 @@ section h3 {
     }
 }
 
+/* ==========================================================
+   レート戦バトル演出画面
+   ========================================================== */
+
+.rated-anim-section {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ヘッダー：モード名・対戦相手情報 */
+.rata-header {
+    text-align: center;
+}
+
+.rata-header h2 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    color: #1565c0;
+}
+
+.rata-matchup-names {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.rata-vs {
+    color: #e53935;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.rata-matchup-rates {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    font-size: 0.78rem;
+    color: #546e7a;
+    margin-top: 2px;
+}
+
+/* スコアボード */
+.rata-scoreboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: #1565c0;
+    border-radius: 14px;
+    padding: 14px 20px;
+    color: #fff;
+}
+
+.rata-score-col {
+    text-align: center;
+    min-width: 56px;
+}
+
+.rata-score-num {
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.rata-score-num.score-pop {
+    animation: rataPop 0.35s ease;
+}
+
+@keyframes rataPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.5); color: #ffe066; }
+    100% { transform: scale(1); }
+}
+
+.rata-score-sep {
+    font-size: 2rem;
+    font-weight: 700;
+    opacity: 0.7;
+}
+
+.rata-score-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    opacity: 0.8;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+/* キャラクターステージ */
+.rata-stage {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    min-height: 160px;
+    background: linear-gradient(180deg, #f0f8ff, #e8f5e9);
+    border-radius: 14px;
+    border: 2px solid #cfd8dc;
+    padding: 16px 10px 10px;
+}
+
+.rata-character-col {
+    text-align: center;
+    width: 44%;
+}
+
+.rata-opponent-col .tt-character {
+    transform: scaleX(-1);
+}
+
+/* 得点時アニメーション */
+.tt-character.anim-score {
+    transform: translateY(-14px) scale(1.15);
+    filter: brightness(1.3) drop-shadow(0 0 10px rgba(255, 215, 0, 0.9));
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.rata-opponent-col .tt-character.anim-score {
+    transform: scaleX(-1) translateY(-14px) scale(1.15);
+}
+
+/* 失点時アニメーション */
+.tt-character.anim-lose-point {
+    transform: translateY(8px) scale(0.9);
+    filter: grayscale(0.5) brightness(0.8);
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.rata-opponent-col .tt-character.anim-lose-point {
+    transform: scaleX(-1) translateY(8px) scale(0.9);
+}
+
+/* 勝敗アニメーション（演出画面内） */
+.rata-opponent-col .tt-character.anim-win {
+    transform: scaleX(-1) translateY(-18px) scale(1.08);
+}
+
+.rata-opponent-col .tt-character.anim-lose {
+    transform: scaleX(-1) translateY(14px) scale(0.92);
+}
+
+/* スキルアニメーション（演出画面内） */
+.rata-stage .tt-character.anim-skill {
+    filter: brightness(1.4) drop-shadow(0 0 12px rgba(255, 235, 59, 0.9));
+}
+
+.rata-stage .tt-character.anim-skill .character-effect {
+    opacity: 1;
+    border-color: #ffeb3b;
+    box-shadow: 0 0 18px #ffeb3b;
+}
+
+/* ログエリア */
+.rata-log-area {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 14px 16px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rata-log-text {
+    font-size: 0.88rem;
+    color: #343a40;
+    text-align: center;
+    line-height: 1.5;
+    margin: 0;
+    word-break: break-all;
+}
+
+/* 試合結果エリア */
+.rata-result-area {
+    text-align: center;
+    padding: 10px;
+}
+
+.rata-result-text {
+    font-size: 1.6rem;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+
+.rata-result-win {
+    color: #e53935;
+    text-shadow: 0 0 12px rgba(229, 57, 53, 0.4);
+}
+
+.rata-result-lose {
+    color: #546e7a;
+}
+
+.rata-final-score {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #37474f;
+    margin-bottom: 6px;
+}
+
+.rata-rate-change {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.rata-rate-up {
+    color: #e53935;
+}
+
+.rata-rate-down {
+    color: #1e88e5;
+}
+
+/* スキップ・結果ボタン */
+.rata-buttons {
+    text-align: center;
+}
+
+.rata-skip-btn {
+    min-width: 160px;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 600px) {
+    .rata-score-num {
+        font-size: 2rem;
+    }
+
+    .rata-stage {
+        min-height: 130px;
+    }
+}
+
