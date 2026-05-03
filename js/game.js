@@ -56,7 +56,7 @@ let isNewPlayerSetup = false;
 // 画面状態管理
 // ============================================================
 
-const SCREEN_NAMES = ['home', 'training', 'battleModeSelect', 'ratedBattleStart', 'battleStart', 'battle', 'battleResult', 'data', 'settings'];
+const SCREEN_NAMES = ['home', 'training', 'battleModeSelect', 'ratedBattleStart', 'battleStart', 'battle', 'battleResult', 'data', 'settings', 'ratedBattleAnimation'];
 let currentScreen = 'home';
 
 let battleStartCpu = null;
@@ -582,7 +582,7 @@ function handleStartRatedBattle() {
     result.displayRateAfter = displayRateAfter;
     result.ratedMatchesAfter = player.ratedMatches;
 
-    applyMatchResult(result);
+    showRatedBattleAnimation(result);
 }
 
 function setupRatedBattleStartButtons() {
@@ -599,6 +599,315 @@ function setupRatedBattleStartButtons() {
     const findAnotherBtn = document.getElementById('findAnotherRatedOpponentBtn');
     if (findAnotherBtn) {
         findAnotherBtn.addEventListener('click', handleFindRatedOpponent);
+    }
+}
+
+// ============================================================
+// レート戦バトル演出
+// ============================================================
+
+let pendingRatedMatchResult = null;
+let ratedAnimationAborted = false;
+let ratedAnimationResultShown = false;
+
+/**
+ * バトルログ行から得点イベントを抽出して構造化データとして返す。
+ * 各ログ行の先頭にある [X-Y] 形式のスコアを使って得点者を判定する。
+ */
+function parseRatedBattleScoringEvents(lines) {
+    const scorePattern = /^\[(\d+)-(\d+)\]/;
+    const events = [];
+    let prevPlayer = 0;
+    let prevOpponent = 0;
+
+    for (const line of lines) {
+        const match = line.match(scorePattern);
+        if (!match) {
+            continue;
+        }
+        const playerScore = parseInt(match[1], 10);
+        const opponentScore = parseInt(match[2], 10);
+
+        let pointWinner;
+        if (playerScore > prevPlayer) {
+            pointWinner = 'player';
+        } else if (opponentScore > prevOpponent) {
+            pointWinner = 'opponent';
+        }
+
+        // スコアが変化していない行はスキップするが、前回スコアは更新する
+        prevPlayer = playerScore;
+        prevOpponent = opponentScore;
+
+        if (!pointWinner) {
+            continue;
+        }
+
+        const animationType = inferRatedAnimationType(line);
+        events.push({
+            text: line.replace(/^\[\d+-\d+\] /, ''),
+            pointWinner,
+            score: { player: playerScore, opponent: opponentScore },
+            animationType
+        });
+    }
+
+    return events;
+}
+
+function inferRatedAnimationType(logText) {
+    if (logText.includes('スキル') || logText.includes('発動')) {
+        return 'skill';
+    }
+    if (logText.includes('カウンター') || logText.includes('反撃')) {
+        return 'counter';
+    }
+    if (logText.includes('ブロック') || logText.includes('カット')) {
+        return 'defense';
+    }
+    return 'attack';
+}
+
+function showRatedBattleAnimation(result) {
+    pendingRatedMatchResult = result;
+    ratedAnimationAborted = false;
+    ratedAnimationResultShown = false;
+
+    const playerStyleName = player.style !== null ? styles[player.style].name : '未選択';
+    const opponentStyleName = styles[result.cpu.style].name;
+
+    const setEl = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setEl('rataPlayerName', player.name);
+    setEl('rataOpponentName', result.cpu.name);
+    setEl('rataPlayerScore', '0');
+    setEl('rataOpponentScore', '0');
+
+    const playerDisplayRate = Number.isFinite(result.displayRateBefore)
+        ? result.displayRateBefore
+        : calculateEffectiveRate(player.rate, player.ratedMatches);
+    const opponentDisplayRate = Number.isFinite(selectedRatedOpponent?.displayRate)
+        ? selectedRatedOpponent.displayRate
+        : calculateEffectiveRate(result.cpu.rate || 1500, result.cpu.ratedMatches || 0);
+
+    setEl('rataPlayerRate', `Rate ${playerDisplayRate}`);
+    setEl('rataOpponentRate', `Rate ${opponentDisplayRate}`);
+
+    const playerStyleClass = getCharacterClassByStyle(playerStyleName);
+    const opponentStyleClass = getCharacterClassByStyle(opponentStyleName);
+
+    const rataPlayerChar = document.getElementById('rata-player-character');
+    const rataOpponentChar = document.getElementById('rata-opponent-character');
+    if (rataPlayerChar) {
+        rataPlayerChar.className = `tt-character player-character ${playerStyleClass}`;
+    }
+    if (rataOpponentChar) {
+        rataOpponentChar.className = `tt-character enemy-character ${opponentStyleClass}`;
+    }
+
+    const resultArea = document.getElementById('rataResultArea');
+    if (resultArea) {
+        resultArea.style.display = 'none';
+    }
+
+    const logText = document.getElementById('rataLogText');
+    if (logText) {
+        logText.textContent = '全国Rate対戦 開始！';
+    }
+
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.textContent = 'スキップ';
+    }
+
+    changeScreen('ratedBattleAnimation');
+
+    setTimeout(() => {
+        _playRatedBattleAnimationSequence(result);
+    }, 800);
+}
+
+function _playRatedBattleAnimationSequence(result) {
+    const events = parseRatedBattleScoringEvents(result.battleLines);
+
+    if (events.length === 0 || ratedAnimationAborted) {
+        _onRatedAnimationAllDone();
+        return;
+    }
+
+    let index = 0;
+
+    function playNext() {
+        if (ratedAnimationAborted) {
+            return;
+        }
+
+        if (index >= events.length) {
+            _showRatedBattleResultSummary(result);
+            return;
+        }
+
+        const event = events[index];
+
+        const logText = document.getElementById('rataLogText');
+        if (logText) {
+            logText.textContent = event.text;
+        }
+
+        _playRataCharacterAnimation(event.pointWinner, event.animationType);
+
+        const scoreDelay = event.animationType === 'skill' ? 600 : 380;
+        setTimeout(() => {
+            if (ratedAnimationAborted) {
+                return;
+            }
+            _updateRataScoreboard(event.score.player, event.score.opponent, event.pointWinner);
+        }, scoreDelay);
+
+        index++;
+
+        // 最後のイベントは少し長めに表示する
+        const isLast = index >= events.length;
+        const baseDuration = event.animationType === 'skill' ? 1400 : 1000;
+        const duration = isLast ? baseDuration + 500 : baseDuration;
+        setTimeout(playNext, duration);
+    }
+
+    playNext();
+}
+
+function _updateRataScoreboard(playerScore, opponentScore, pointWinner) {
+    const playerScoreEl = document.getElementById('rataPlayerScore');
+    const opponentScoreEl = document.getElementById('rataOpponentScore');
+
+    if (playerScoreEl) {
+        playerScoreEl.textContent = playerScore;
+    }
+    if (opponentScoreEl) {
+        opponentScoreEl.textContent = opponentScore;
+    }
+
+    const popEl = pointWinner === 'player' ? playerScoreEl : opponentScoreEl;
+    if (popEl) {
+        popEl.classList.remove('score-pop');
+        // Force reflow to restart animation
+        void popEl.offsetWidth;
+        popEl.classList.add('score-pop');
+        setTimeout(() => popEl.classList.remove('score-pop'), 400);
+    }
+}
+
+function _playRataCharacterAnimation(pointWinner, animationType) {
+    const playerChar = document.getElementById('rata-player-character');
+    const opponentChar = document.getElementById('rata-opponent-character');
+
+    if (!playerChar || !opponentChar) {
+        return;
+    }
+
+    const animClasses = ['anim-attack', 'anim-defense', 'anim-counter', 'anim-skill', 'anim-score', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    playerChar.classList.remove(...animClasses);
+    opponentChar.classList.remove(...animClasses);
+
+    const scorer = pointWinner === 'player' ? playerChar : opponentChar;
+    const loser = pointWinner === 'player' ? opponentChar : playerChar;
+
+    const scoreClass = animationType === 'skill' ? 'anim-skill' : 'anim-score';
+    scorer.classList.add(scoreClass);
+    loser.classList.add('anim-lose-point');
+
+    setTimeout(() => {
+        playerChar.classList.remove(...animClasses);
+        opponentChar.classList.remove(...animClasses);
+    }, 800);
+}
+
+function _showRatedBattleResultSummary(result) {
+    if (ratedAnimationResultShown) {
+        return;
+    }
+    ratedAnimationResultShown = true;
+
+    // 最終スコアを取得
+    const events = parseRatedBattleScoringEvents(result.battleLines);
+    const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+
+    if (lastEvent) {
+        _updateRataScoreboard(lastEvent.score.player, lastEvent.score.opponent, null);
+    }
+
+    const resultArea = document.getElementById('rataResultArea');
+    if (resultArea) {
+        resultArea.style.display = '';
+    }
+
+    const resultText = document.getElementById('rataResultText');
+    if (resultText) {
+        resultText.textContent = result.isPlayerWin ? '🏆 WIN!' : '😤 LOSE...';
+        resultText.className = `rata-result-text ${result.isPlayerWin ? 'rata-result-win' : 'rata-result-lose'}`;
+    }
+
+    const finalScoreEl = document.getElementById('rataFinalScore');
+    if (finalScoreEl && lastEvent) {
+        finalScoreEl.textContent = `最終スコア ${lastEvent.score.player} - ${lastEvent.score.opponent}`;
+    }
+
+    if (Number.isFinite(result.rateChange)) {
+        const rateChangeEl = document.getElementById('rataRateChange');
+        if (rateChangeEl) {
+            const sign = result.rateChange >= 0 ? '+' : '';
+            rateChangeEl.textContent = `Rate ${sign}${result.rateChange}`;
+            rateChangeEl.className = `rata-rate-change ${result.rateChange >= 0 ? 'rata-rate-up' : 'rata-rate-down'}`;
+        }
+    }
+
+    // 勝敗キャラクターアニメーション
+    const playerChar = document.getElementById('rata-player-character');
+    const opponentChar = document.getElementById('rata-opponent-character');
+    const animClasses = ['anim-attack', 'anim-defense', 'anim-counter', 'anim-skill', 'anim-score', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    if (playerChar) {
+        playerChar.classList.remove(...animClasses);
+        playerChar.classList.add(result.isPlayerWin ? 'anim-win' : 'anim-lose');
+    }
+    if (opponentChar) {
+        opponentChar.classList.remove(...animClasses);
+        opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
+    }
+
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.textContent = '結果を見る';
+    }
+}
+
+function _onRatedAnimationAllDone() {
+    if (pendingRatedMatchResult) {
+        const r = pendingRatedMatchResult;
+        pendingRatedMatchResult = null;
+        applyMatchResult(r);
+    }
+}
+
+function setupRatedBattleAnimationButtons() {
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            if (ratedAnimationResultShown) {
+                // 結果画面が表示済み → 試合結果画面へ進む
+                _onRatedAnimationAllDone();
+            } else {
+                // アニメーション中 → スキップして結果まとめを表示
+                ratedAnimationAborted = true;
+                if (pendingRatedMatchResult) {
+                    _showRatedBattleResultSummary(pendingRatedMatchResult);
+                }
+            }
+        });
     }
 }
 
@@ -4090,6 +4399,7 @@ async function initGame() {
     setupTournamentButton();
     setupBattleModeSelectButtons();
     setupRatedBattleStartButtons();
+    setupRatedBattleAnimationButtons();
     setupTacticSelect();
     setupRivalButtons();
     setupDebugSkillButton();

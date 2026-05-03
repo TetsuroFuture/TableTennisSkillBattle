@@ -389,6 +389,80 @@
             </div><!-- /#screen-ratedBattleStart -->
 
             <!-- ==============================
+                 レート戦バトル演出画面
+                 ============================== -->
+            <div id="screen-ratedBattleAnimation" class="game-screen" style="display:none;">
+
+            <section class="rated-anim-section">
+                <div class="rata-header">
+                    <h2>🌏 全国Rate対戦</h2>
+                    <div class="rata-matchup-names">
+                        <span class="rata-player-name" id="rataPlayerName">-</span>
+                        <span class="rata-vs">vs</span>
+                        <span class="rata-opponent-name" id="rataOpponentName">-</span>
+                    </div>
+                    <div class="rata-matchup-rates">
+                        <span id="rataPlayerRate">-</span>
+                        <span></span>
+                        <span id="rataOpponentRate">-</span>
+                    </div>
+                </div>
+
+                <div class="rata-scoreboard">
+                    <div class="rata-score-col">
+                        <div class="rata-score-num" id="rataPlayerScore">0</div>
+                        <div class="rata-score-label">PLAYER</div>
+                    </div>
+                    <div class="rata-score-sep">-</div>
+                    <div class="rata-score-col">
+                        <div class="rata-score-num" id="rataOpponentScore">0</div>
+                        <div class="rata-score-label">RIVAL</div>
+                    </div>
+                </div>
+
+                <div class="rata-stage">
+                    <div class="rata-character-col rata-player-col">
+                        <div id="rata-player-character" class="tt-character player-character">
+                            <div class="character-effect"></div>
+                            <div class="character-head"></div>
+                            <div class="character-body"></div>
+                            <div class="character-arm racket-arm"></div>
+                            <div class="character-racket"></div>
+                            <div class="character-leg left-leg"></div>
+                            <div class="character-leg right-leg"></div>
+                        </div>
+                    </div>
+                    <div class="rata-character-col rata-opponent-col">
+                        <div id="rata-opponent-character" class="tt-character enemy-character">
+                            <div class="character-effect"></div>
+                            <div class="character-head"></div>
+                            <div class="character-body"></div>
+                            <div class="character-arm racket-arm"></div>
+                            <div class="character-racket"></div>
+                            <div class="character-leg left-leg"></div>
+                            <div class="character-leg right-leg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rata-log-area" id="rataLogArea">
+                    <p id="rataLogText" class="rata-log-text">試合開始！</p>
+                </div>
+
+                <div class="rata-result-area" id="rataResultArea" style="display:none;">
+                    <div class="rata-result-text" id="rataResultText"></div>
+                    <div class="rata-final-score" id="rataFinalScore"></div>
+                    <div class="rata-rate-change" id="rataRateChange"></div>
+                </div>
+
+                <div class="rata-buttons">
+                    <button class="battle-btn rata-skip-btn" id="rataSkipBtn">スキップ</button>
+                </div>
+            </section>
+
+            </div><!-- /#screen-ratedBattleAnimation -->
+
+            <!-- ==============================
                  試合開始画面
                  ============================== -->
             <div id="screen-battleStart" class="game-screen" style="display:none;">
