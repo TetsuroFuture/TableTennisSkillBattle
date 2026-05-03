@@ -627,28 +627,29 @@ function parseRatedBattleScoringEvents(lines) {
         }
         const playerScore = parseInt(match[1], 10);
         const opponentScore = parseInt(match[2], 10);
+
         let pointWinner;
         if (playerScore > prevPlayer) {
             pointWinner = 'player';
         } else if (opponentScore > prevOpponent) {
             pointWinner = 'opponent';
-        } else {
-            // スコアが変化していない行はスキップする
-            prevPlayer = playerScore;
-            prevOpponent = opponentScore;
+        }
+
+        // スコアが変化していない行はスキップするが、前回スコアは更新する
+        prevPlayer = playerScore;
+        prevOpponent = opponentScore;
+
+        if (!pointWinner) {
             continue;
         }
-        const animationType = inferRatedAnimationType(line);
 
+        const animationType = inferRatedAnimationType(line);
         events.push({
             text: line.replace(/^\[\d+-\d+\] /, ''),
             pointWinner,
             score: { player: playerScore, opponent: opponentScore },
             animationType
         });
-
-        prevPlayer = playerScore;
-        prevOpponent = opponentScore;
     }
 
     return events;

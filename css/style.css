@@ -2551,7 +2551,8 @@ section h3 {
     text-align: center;
     line-height: 1.5;
     margin: 0;
-    word-break: break-all;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* 試合結果エリア */
