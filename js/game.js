@@ -141,6 +141,7 @@ const RATED_PROVISIONAL_THRESHOLD = 50;
 const MAX_PROVISIONAL_PENALTY = 500;
 const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
+const MAX_OPPONENT_FETCH_SIZE = 50;
 let selectedRatedOpponent = null;
 let lastRatedOpponentId = null;
 let recentRatedWins = 0;
@@ -373,7 +374,7 @@ async function findRatedOpponent() {
         const snapshot = await db.collection('players')
             .where('rate', '>=', rateMin)
             .where('rate', '<=', rateMax)
-            .limit(MAX_OPPONENT_POOL_SIZE)
+            .limit(MAX_OPPONENT_FETCH_SIZE)
             .get();
 
         const candidates = [];
