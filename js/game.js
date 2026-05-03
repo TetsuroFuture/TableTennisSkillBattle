@@ -627,7 +627,17 @@ function parseRatedBattleScoringEvents(lines) {
         }
         const playerScore = parseInt(match[1], 10);
         const opponentScore = parseInt(match[2], 10);
-        const pointWinner = playerScore > prevPlayer ? 'player' : 'opponent';
+        let pointWinner;
+        if (playerScore > prevPlayer) {
+            pointWinner = 'player';
+        } else if (opponentScore > prevOpponent) {
+            pointWinner = 'opponent';
+        } else {
+            // スコアが変化していない行はスキップする
+            prevPlayer = playerScore;
+            prevOpponent = opponentScore;
+            continue;
+        }
         const animationType = inferRatedAnimationType(line);
 
         events.push({
