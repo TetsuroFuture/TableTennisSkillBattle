@@ -3784,16 +3784,7 @@ function setupTrainingButtons() {
             player[stat] += 1;
             // 育成ボタンクリックごとの個別保存は廃止。画面遷移時に一括保存する。
 
-            const oldLevel = player.level;
             player.level += 1;
-            const levelDiff = player.level - oldLevel;
-
-            for (let i = 0; i < levelDiff; i += 1) {
-                if (getUnownedSkills(player).length === 0) {
-                    break;
-                }
-                gainRandomSkill(player);
-            }
 
             updateStats();
             updatePlayerInfo();
