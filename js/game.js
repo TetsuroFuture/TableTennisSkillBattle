@@ -668,12 +668,38 @@ function inferRatedAnimationType(logText) {
     return 'attack';
 }
 
+/**
+ * 戦型名から画像フォルダ名を返す。
+ */
+function getStyleImageFolder(styleName) {
+    switch (styleName) {
+        case '前陣速攻型':            return '前陣速攻';
+        case 'オールフォア型':        return 'オールフォア';
+        case 'パワー両ハンド型':      return 'パワー両ハンド';
+        case 'ブロック＆カウンター型': return 'ブロックカウンター';
+        case '一撃カウンター型':      return '一撃カウンター';
+        case 'オールラウンド型':      return 'オールラウンド';
+        case 'ペン粒型':              return 'ペン粒';
+        case 'カットマン型':          return 'カットマン';
+        case '異質攻守型':            return '異質攻守';
+        default:                      return 'オールラウンド';
+    }
+}
+
+/**
+ * 戦型名と状態（normal/score/win/lose）から画像パスを返す。
+ */
+function getRataCharacterImageSrc(styleName, state) {
+    const folder = getStyleImageFolder(styleName);
+    return `assets/images/style/${folder}/${state}.webp`;
+}
+
 function showRatedBattleAnimation(result) {
     pendingRatedMatchResult = result;
     ratedAnimationAborted = false;
     ratedAnimationResultShown = false;
 
-    const playerStyleName = player.style !== null ? styles[player.style].name : '未選択';
+    const playerStyleName = player.style !== null ? styles[player.style].name : 'オールラウンド型';
     const opponentStyleName = styles[result.cpu.style].name;
 
     const setEl = (id, text) => {
@@ -698,16 +724,25 @@ function showRatedBattleAnimation(result) {
     setEl('rataPlayerRate', `Rate ${playerDisplayRate}`);
     setEl('rataOpponentRate', `Rate ${opponentDisplayRate}`);
 
-    const playerStyleClass = getCharacterClassByStyle(playerStyleName);
-    const opponentStyleClass = getCharacterClassByStyle(opponentStyleName);
+    // キャラクター画像を戦型に合わせてセットする
+    const playerImgEl = document.getElementById('rata-player-img');
+    const opponentImgEl = document.getElementById('rata-opponent-img');
+    if (playerImgEl) {
+        playerImgEl.src = getRataCharacterImageSrc(playerStyleName, 'normal');
+    }
+    if (opponentImgEl) {
+        opponentImgEl.src = getRataCharacterImageSrc(opponentStyleName, 'normal');
+    }
 
+    // アニメーションクラスをリセットする
     const rataPlayerChar = document.getElementById('rata-player-character');
     const rataOpponentChar = document.getElementById('rata-opponent-character');
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
     if (rataPlayerChar) {
-        rataPlayerChar.className = `tt-character player-character ${playerStyleClass}`;
+        rataPlayerChar.classList.remove(...animClasses);
     }
     if (rataOpponentChar) {
-        rataOpponentChar.className = `tt-character enemy-character ${opponentStyleClass}`;
+        rataOpponentChar.classList.remove(...animClasses);
     }
 
     const resultArea = document.getElementById('rataResultArea');
@@ -805,25 +840,40 @@ function _updateRataScoreboard(playerScore, opponentScore, pointWinner) {
 function _playRataCharacterAnimation(pointWinner, animationType) {
     const playerChar = document.getElementById('rata-player-character');
     const opponentChar = document.getElementById('rata-opponent-character');
+    const playerImg = document.getElementById('rata-player-img');
+    const opponentImg = document.getElementById('rata-opponent-img');
 
     if (!playerChar || !opponentChar) {
         return;
     }
 
-    const animClasses = ['anim-attack', 'anim-defense', 'anim-counter', 'anim-skill', 'anim-score', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
     playerChar.classList.remove(...animClasses);
     opponentChar.classList.remove(...animClasses);
 
-    const scorer = pointWinner === 'player' ? playerChar : opponentChar;
-    const loser = pointWinner === 'player' ? opponentChar : playerChar;
+    const scorerChar = pointWinner === 'player' ? playerChar : opponentChar;
+    const loserChar = pointWinner === 'player' ? opponentChar : playerChar;
+    const scorerImg = pointWinner === 'player' ? playerImg : opponentImg;
 
     const scoreClass = animationType === 'skill' ? 'anim-skill' : 'anim-score';
-    scorer.classList.add(scoreClass);
-    loser.classList.add('anim-lose-point');
+    scorerChar.classList.add(scoreClass);
+    loserChar.classList.add('anim-lose-point');
+
+    // 得点者の画像を score 状態へ切り替える
+    if (scorerImg && scorerImg.src) {
+        scorerImg.src = scorerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/score.webp');
+    }
 
     setTimeout(() => {
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
+        // 画像を normal 状態に戻す
+        if (playerImg && playerImg.src) {
+            playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
+        }
+        if (opponentImg && opponentImg.src) {
+            opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
+        }
     }, 800);
 }
 
@@ -866,10 +916,12 @@ function _showRatedBattleResultSummary(result) {
         }
     }
 
-    // 勝敗キャラクターアニメーション
+    // 勝敗キャラクターアニメーション・画像切り替え
     const playerChar = document.getElementById('rata-player-character');
     const opponentChar = document.getElementById('rata-opponent-character');
-    const animClasses = ['anim-attack', 'anim-defense', 'anim-counter', 'anim-skill', 'anim-score', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    const playerImg = document.getElementById('rata-player-img');
+    const opponentImg = document.getElementById('rata-opponent-img');
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
     if (playerChar) {
         playerChar.classList.remove(...animClasses);
         playerChar.classList.add(result.isPlayerWin ? 'anim-win' : 'anim-lose');
@@ -877,6 +929,13 @@ function _showRatedBattleResultSummary(result) {
     if (opponentChar) {
         opponentChar.classList.remove(...animClasses);
         opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
+    }
+    // 勝敗画像へ切り替える
+    if (playerImg && playerImg.src) {
+        playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'win' : 'lose'}.webp`);
+    }
+    if (opponentImg && opponentImg.src) {
+        opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
     }
 
     const skipBtn = document.getElementById('rataSkipBtn');
