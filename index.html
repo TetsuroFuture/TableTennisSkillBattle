@@ -263,12 +263,8 @@
             <!-- スキル管理セクション -->
             <section class="skill-section">
                 <h2>スキルカード</h2>
-                <div class="skill-debug-row">
-                    <button class="debug-skill-btn" id="debugGainSkillButton">ランダムスキル獲得（開発用）</button>
-                </div>
-                <div class="skill-header-row">
-                    <span class="label">装備枠:</span>
-                    <span class="value" id="equipSlotsInfo">装備中 0 / 2</span>
+                <div class="skill-acquire-row">
+                    <button class="skill-acquire-btn" id="buyRandomSkillBtn">🎲 ランダムスキル獲得（100EXP）</button>
                 </div>
                 <div class="skill-list" id="unifiedSkillList">
                     <div class="skill-empty">まだスキルカードを持っていません</div>
@@ -373,7 +369,24 @@
                         <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
                         <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
                         <div class="rated-rate-diff" id="ratedRateDiff">-</div>
+                        <div class="rated-opponent-stats bs-stats-summary" id="ratedOpponentStats">-</div>
+                        <div class="rated-opponent-skills-area">
+                            <div class="rated-opp-skills-label">相手のスキルカード:</div>
+                            <div id="ratedOpponentSkills" class="rated-opp-skills-list">-</div>
+                        </div>
                         <div class="rated-opponent-comment" id="ratedOpponentComment"></div>
+                    </div>
+                </div>
+
+                <!-- プレイヤー スキルカード設定エリア -->
+                <div class="pre-battle-skill-area" id="ratedPlayerSkillArea" style="display:none;">
+                    <h3>🃏 スキルカード設定</h3>
+                    <div class="skill-header-row">
+                        <span class="label">装備枠:</span>
+                        <span class="value" id="ratedEquipSlotsInfo">装備中 0 / 2</span>
+                    </div>
+                    <div class="skill-list" id="ratedPlayerSkillList">
+                        <div class="skill-empty">スキルカードを持っていません</div>
                     </div>
                 </div>
 
@@ -381,7 +394,6 @@
                 <div class="rated-battle-buttons">
                     <button class="battle-btn rated-find-btn" id="findRatedOpponentBtn">🔍 対戦相手を探す</button>
                     <button class="battle-btn rated-start-btn" id="startRatedBattleBtn" style="display:none;">⚔️ この相手と対戦する</button>
-                    <button class="battle-btn rated-find-another-btn" id="findAnotherRatedOpponentBtn" style="display:none;">🔄 別の相手を探す</button>
                     <button class="nav-btn settings-back-btn" data-screen="battleModeSelect">← 戻る</button>
                 </div>
             </section>
@@ -487,6 +499,20 @@
                             <span class="value" id="bsCpuStyle">-</span>
                         </div>
                         <div class="bs-stats-summary" id="bsCpuStats">-</div>
+                        <div class="bs-skills-label">スキルカード:</div>
+                        <div class="bs-skills-summary" id="bsCpuSkills">-</div>
+                    </div>
+                </div>
+
+                <!-- プレイヤー スキルカード設定 -->
+                <div class="pre-battle-skill-area">
+                    <h3>🃏 スキルカード設定</h3>
+                    <div class="skill-header-row">
+                        <span class="label">装備枠:</span>
+                        <span class="value" id="bsEquipSlotsInfo">装備中 0 / 2</span>
+                    </div>
+                    <div class="skill-list" id="bsPlayerSkillList">
+                        <div class="skill-empty">スキルカードを持っていません</div>
                     </div>
                 </div>
 
