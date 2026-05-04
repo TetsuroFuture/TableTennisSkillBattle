@@ -63,6 +63,74 @@ let debugFirestoreWriteCount = 0;
 let lastSavedPlayerData = null;
 
 // ============================================================
+// プレイヤー名バリデーション
+// ============================================================
+
+const BLOCKED_NAME_WORDS = [
+    'admin', 'administrator', 'official', 'system', 'guest',
+    'moderator', 'mod', 'null', 'undefined',
+    '公式', '運営', '管理者', '開発者', '管理人', 'サポート', 'スタッフ'
+];
+
+/**
+ * プレイヤー名を正規化する（前後の空白削除・全角英数字を半角に変換）
+ * @param {string} name
+ * @returns {string}
+ */
+function normalizePlayerName(name) {
+    if (typeof name !== 'string') return '';
+    let normalized = name.trim();
+    // 全角英数字を半角に変換
+    normalized = normalized.replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
+    );
+    return normalized;
+}
+
+/**
+ * 禁止ワードを含むか確認する
+ * @param {string} name 正規化済みの名前
+ * @returns {boolean}
+ */
+function containsBlockedWord(name) {
+    const lower = name.toLowerCase();
+    return BLOCKED_NAME_WORDS.some(word => lower.includes(word.toLowerCase()));
+}
+
+/**
+ * プレイヤー名のバリデーションを行う
+ * @param {string} name
+ * @returns {{valid: boolean, message?: string, name?: string}}
+ */
+function validatePlayerName(name) {
+    const normalizedName = normalizePlayerName(name);
+
+    if (!normalizedName) {
+        return { valid: false, message: '選手名を入力してください' };
+    }
+
+    if (normalizedName.length < 2 || normalizedName.length > 12) {
+        return { valid: false, message: '選手名は2〜12文字で入力してください' };
+    }
+
+    // HTMLタグや危険な文字を含む場合は拒否
+    if (/[<>"'&]/.test(normalizedName)) {
+        return { valid: false, message: 'この選手名は使用できません' };
+    }
+
+    // アルファベット・数字・日本語文字が一切含まれない（記号・絵文字のみ）場合は拒否
+    if (!/[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5A]/.test(normalizedName)) {
+        return { valid: false, message: '記号だけの選手名は使用できません' };
+    }
+
+    if (containsBlockedWord(normalizedName)) {
+        return { valid: false, message: 'この選手名は使用できません' };
+    }
+
+    return { valid: true, name: normalizedName };
+}
+
+// ============================================================
 // 画面状態管理
 // ============================================================
 
@@ -4120,7 +4188,12 @@ function renderSetupStyleList() {
 }
 
 function completeInitialSetup(name, styleIndex) {
-    player.name = name;
+    const validation = validatePlayerName(name);
+    if (!validation.valid) {
+        addLog(`選手名エラー: ${validation.message}`, 'warning');
+        return;
+    }
+    player.name = validation.name;
     player.style = styleIndex;
     player.initialSetupCompleted = true;
 
@@ -4132,7 +4205,7 @@ function completeInitialSetup(name, styleIndex) {
     hideSetupOverlay();
     renderAll();
 
-    addLog(`選手名「${name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
+    addLog(`選手名「${validation.name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
     autoSavePlayer('initial_setup');
 }
 
@@ -4150,12 +4223,13 @@ function setupInitialSetupOverlay() {
     }
 
     step1NextBtn.addEventListener('click', function() {
-        const name = nameInput.value.trim();
         const nameError = document.getElementById('setupNameError');
-        if (!name) {
+        const result = validatePlayerName(nameInput.value);
+        if (!result.valid) {
             nameInput.focus();
             nameInput.classList.add('setup-input-error');
             if (nameError) {
+                nameError.textContent = result.message;
                 nameError.style.display = 'block';
             }
             return;
@@ -4164,7 +4238,7 @@ function setupInitialSetupOverlay() {
         if (nameError) {
             nameError.style.display = 'none';
         }
-        setupPlayerName = name;
+        setupPlayerName = result.name;
         step1.style.display = 'none';
         step2.style.display = 'block';
         setupSelectedStyleIndex = null;
@@ -4293,7 +4367,12 @@ function setupInitialSetupOverlay() {
 // ============================================================
 
 async function completeInitialSetupWithPassword(name, styleIndex, password) {
-    player.name = name;
+    const validation = validatePlayerName(name);
+    if (!validation.valid) {
+        addLog(`選手名エラー: ${validation.message}`, 'warning');
+        return;
+    }
+    player.name = validation.name;
     player.style = styleIndex;
     player.initialSetupCompleted = true;
 
@@ -4305,7 +4384,7 @@ async function completeInitialSetupWithPassword(name, styleIndex, password) {
     hideSetupOverlay();
     renderAll();
 
-    addLog(`選手名「${name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
+    addLog(`選手名「${validation.name}」、戦型「${styles[styleIndex].name}」で初期設定完了！`, 'success');
     autoSavePlayer('initial_setup');
 
     if (password && isFirebaseReady && db && currentPlayerId) {
