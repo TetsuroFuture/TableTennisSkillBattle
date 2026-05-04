@@ -2644,3 +2644,108 @@ section h3 {
     }
 }
 
+/* ==========================================================
+   スキルバッジ（対戦開始画面・相手スキル表示）
+   ========================================================== */
+
+.skill-badge {
+    display: inline-block;
+    background: #d3f9d8;
+    color: #087f5b;
+    border: 1px solid #8ce99a;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 2px 2px;
+}
+
+.skill-equipped-badge {
+    display: inline-block;
+    background: #20c997;
+    color: white;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* 試合前スキルカード設定エリア */
+.pre-battle-skill-area {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.pre-battle-skill-area h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #343a40;
+    margin-bottom: 10px;
+}
+
+/* CPUスキル表示 */
+.bs-skills-label {
+    font-size: 11px;
+    color: #868e96;
+    font-weight: 600;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bs-skills-summary {
+    font-size: 12px;
+    color: #495057;
+    background: #f8f9fa;
+    border-radius: 5px;
+    padding: 6px 8px;
+    line-height: 1.8;
+    word-break: break-all;
+}
+
+/* 相手スキル表示エリア（レート対戦） */
+.rated-opponent-skills-area {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f0d0d0;
+}
+
+.rated-opp-skills-label {
+    font-size: 11px;
+    color: #868e96;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.rated-opp-skills-list {
+    font-size: 12px;
+    color: #495057;
+    line-height: 1.8;
+}
+
+/* ランダムスキル獲得ボタン */
+.skill-acquire-row {
+    margin-bottom: 12px;
+}
+
+.skill-acquire-btn {
+    width: 100%;
+    border: none;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    background: linear-gradient(135deg, #845ef7, #5c7cfa);
+}
+
+.skill-acquire-btn:hover {
+    box-shadow: 0 6px 16px rgba(92, 124, 250, 0.4);
+}
+
