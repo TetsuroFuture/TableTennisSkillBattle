@@ -755,9 +755,9 @@ function showRatedBattleAnimation(result) {
         logText.textContent = '全国Rate対戦 開始！';
     }
 
-    const skipBtn = document.getElementById('rataSkipBtn');
-    if (skipBtn) {
-        skipBtn.textContent = 'スキップ';
+    const resultBtn = document.getElementById('rataResultBtn');
+    if (resultBtn) {
+        resultBtn.style.display = 'none';
     }
 
     changeScreen('ratedBattleAnimation');
@@ -938,9 +938,9 @@ function _showRatedBattleResultSummary(result) {
         opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
     }
 
-    const skipBtn = document.getElementById('rataSkipBtn');
-    if (skipBtn) {
-        skipBtn.textContent = '結果を見る';
+    const resultBtn = document.getElementById('rataResultBtn');
+    if (resultBtn) {
+        resultBtn.style.display = '';
     }
 }
 
@@ -953,19 +953,10 @@ function _onRatedAnimationAllDone() {
 }
 
 function setupRatedBattleAnimationButtons() {
-    const skipBtn = document.getElementById('rataSkipBtn');
-    if (skipBtn) {
-        skipBtn.addEventListener('click', () => {
-            if (ratedAnimationResultShown) {
-                // 結果画面が表示済み → 試合結果画面へ進む
-                _onRatedAnimationAllDone();
-            } else {
-                // アニメーション中 → スキップして結果まとめを表示
-                ratedAnimationAborted = true;
-                if (pendingRatedMatchResult) {
-                    _showRatedBattleResultSummary(pendingRatedMatchResult);
-                }
-            }
+    const resultBtn = document.getElementById('rataResultBtn');
+    if (resultBtn) {
+        resultBtn.addEventListener('click', () => {
+            _onRatedAnimationAllDone();
         });
     }
 }
