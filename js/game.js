@@ -609,8 +609,6 @@ function setupRatedBattleStartButtons() {
 let pendingRatedMatchResult = null;
 let ratedAnimationAborted = false;
 let ratedAnimationResultShown = false;
-let ratedPlayerStyleName = null;
-let ratedOpponentStyleName = null;
 
 /**
  * バトルログ行から得点イベントを抽出して構造化データとして返す。
@@ -670,12 +668,38 @@ function inferRatedAnimationType(logText) {
     return 'attack';
 }
 
+/**
+ * 戦型名から画像フォルダ名を返す。
+ */
+function getStyleImageFolder(styleName) {
+    switch (styleName) {
+        case '前陣速攻型':            return '前陣速攻';
+        case 'オールフォア型':        return 'オールフォア';
+        case 'パワー両ハンド型':      return 'パワー両ハンド';
+        case 'ブロック＆カウンター型': return 'ブロックカウンター';
+        case '一撃カウンター型':      return '一撃カウンター';
+        case 'オールラウンド型':      return 'オールラウンド';
+        case 'ペン粒型':              return 'ペン粒';
+        case 'カットマン型':          return 'カットマン';
+        case '異質攻守型':            return '異質攻守';
+        default:                      return 'オールラウンド';
+    }
+}
+
+/**
+ * 戦型名と状態（normal/score/win/lose）から画像パスを返す。
+ */
+function getRataCharacterImageSrc(styleName, state) {
+    const folder = getStyleImageFolder(styleName);
+    return `assets/images/style/${folder}/${state}.webp`;
+}
+
 function showRatedBattleAnimation(result) {
     pendingRatedMatchResult = result;
     ratedAnimationAborted = false;
     ratedAnimationResultShown = false;
 
-    const playerStyleName = player.style !== null ? styles[player.style].name : '未選択';
+    const playerStyleName = player.style !== null ? styles[player.style].name : 'オールラウンド型';
     const opponentStyleName = styles[result.cpu.style].name;
 
     const setEl = (id, text) => {
@@ -700,19 +724,26 @@ function showRatedBattleAnimation(result) {
     setEl('rataPlayerRate', `Rate ${playerDisplayRate}`);
     setEl('rataOpponentRate', `Rate ${opponentDisplayRate}`);
 
-    const rataPlayerChar = document.getElementById('rata-player-character');
-    const rataOpponentChar = document.getElementById('rata-opponent-character');
-    if (rataPlayerChar) {
-        rataPlayerChar.className = `rata-char-img player-character`;
-        rataPlayerChar.src = getStyleImagePath(playerStyleName, 'normal');
+    // キャラクター画像を戦型に合わせてセットする
+    const playerImgEl = document.getElementById('rata-player-img');
+    const opponentImgEl = document.getElementById('rata-opponent-img');
+    if (playerImgEl) {
+        playerImgEl.src = getRataCharacterImageSrc(playerStyleName, 'normal');
     }
-    if (rataOpponentChar) {
-        rataOpponentChar.className = `rata-char-img enemy-character`;
-        rataOpponentChar.src = getStyleImagePath(opponentStyleName, 'normal');
+    if (opponentImgEl) {
+        opponentImgEl.src = getRataCharacterImageSrc(opponentStyleName, 'normal');
     }
 
-    ratedPlayerStyleName = playerStyleName;
-    ratedOpponentStyleName = opponentStyleName;
+    // アニメーションクラスをリセットする
+    const rataPlayerChar = document.getElementById('rata-player-character');
+    const rataOpponentChar = document.getElementById('rata-opponent-character');
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    if (rataPlayerChar) {
+        rataPlayerChar.classList.remove(...animClasses);
+    }
+    if (rataOpponentChar) {
+        rataOpponentChar.classList.remove(...animClasses);
+    }
 
     const resultArea = document.getElementById('rataResultArea');
     if (resultArea) {
@@ -809,6 +840,8 @@ function _updateRataScoreboard(playerScore, opponentScore, pointWinner) {
 function _playRataCharacterAnimation(pointWinner, animationType) {
     const playerChar = document.getElementById('rata-player-character');
     const opponentChar = document.getElementById('rata-opponent-character');
+    const playerImg = document.getElementById('rata-player-img');
+    const opponentImg = document.getElementById('rata-opponent-img');
 
     if (!playerChar || !opponentChar) {
         return;
@@ -818,27 +851,28 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
     playerChar.classList.remove(...animClasses);
     opponentChar.classList.remove(...animClasses);
 
-    const scorer = pointWinner === 'player' ? playerChar : opponentChar;
-    const loser = pointWinner === 'player' ? opponentChar : playerChar;
-    const scorerStyleName = pointWinner === 'player' ? ratedPlayerStyleName : ratedOpponentStyleName;
-    const loserStyleName = pointWinner === 'player' ? ratedOpponentStyleName : ratedPlayerStyleName;
+    const scorerChar = pointWinner === 'player' ? playerChar : opponentChar;
+    const loserChar = pointWinner === 'player' ? opponentChar : playerChar;
+    const scorerImg = pointWinner === 'player' ? playerImg : opponentImg;
 
     const scoreClass = animationType === 'skill' ? 'anim-skill' : 'anim-score';
-    scorer.classList.add(scoreClass);
-    loser.classList.add('anim-lose-point');
+    scorerChar.classList.add(scoreClass);
+    loserChar.classList.add('anim-lose-point');
 
-    if (scorerStyleName) {
-        scorer.src = getStyleImagePath(scorerStyleName, 'score');
+    // 得点者の画像を score 状態へ切り替える
+    if (scorerImg && scorerImg.src) {
+        scorerImg.src = scorerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/score.webp');
     }
 
     setTimeout(() => {
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
-        if (ratedPlayerStyleName) {
-            playerChar.src = getStyleImagePath(ratedPlayerStyleName, 'normal');
+        // 画像を normal 状態に戻す
+        if (playerImg && playerImg.src) {
+            playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
         }
-        if (ratedOpponentStyleName) {
-            opponentChar.src = getStyleImagePath(ratedOpponentStyleName, 'normal');
+        if (opponentImg && opponentImg.src) {
+            opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
         }
     }, 800);
 }
@@ -882,23 +916,26 @@ function _showRatedBattleResultSummary(result) {
         }
     }
 
-    // 勝敗キャラクターアニメーション
+    // 勝敗キャラクターアニメーション・画像切り替え
     const playerChar = document.getElementById('rata-player-character');
     const opponentChar = document.getElementById('rata-opponent-character');
+    const playerImg = document.getElementById('rata-player-img');
+    const opponentImg = document.getElementById('rata-opponent-img');
     const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
     if (playerChar) {
         playerChar.classList.remove(...animClasses);
         playerChar.classList.add(result.isPlayerWin ? 'anim-win' : 'anim-lose');
-        if (ratedPlayerStyleName) {
-            playerChar.src = getStyleImagePath(ratedPlayerStyleName, result.isPlayerWin ? 'win' : 'lose');
-        }
     }
     if (opponentChar) {
         opponentChar.classList.remove(...animClasses);
         opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
-        if (ratedOpponentStyleName) {
-            opponentChar.src = getStyleImagePath(ratedOpponentStyleName, result.isPlayerWin ? 'lose' : 'win');
-        }
+    }
+    // 勝敗画像へ切り替える
+    if (playerImg && playerImg.src) {
+        playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'win' : 'lose'}.webp`);
+    }
+    if (opponentImg && opponentImg.src) {
+        opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
     }
 
     const resultBtn = document.getElementById('rataResultBtn');
@@ -2624,28 +2661,6 @@ function getCharacterClassByStyle(styleName) {
         case '異質攻守型':       return 'style-trickster';
         default:                 return 'style-all-round';
     }
-}
-
-function getStyleFolderByName(styleName) {
-    switch (styleName) {
-        case '前陣速攻型':           return '前陣速攻';
-        case 'オールフォア型':       return 'オールフォア';
-        case 'パワー両ハンド型':     return 'パワー両ハンド';
-        case 'ブロック＆カウンター型': return 'ブロックカウンター';
-        case '一撃カウンター型':     return '一撃カウンター';
-        case 'オールラウンド型':     return 'オールラウンド';
-        case 'ペン粒型':             return 'ペン粒';
-        case 'カットマン型':         return 'カットマン';
-        case '異質攻守型':           return '異質攻守';
-        default:                     return 'オールラウンド';
-    }
-}
-
-function getStyleImagePath(styleName, imageType) {
-    const folder = getStyleFolderByName(styleName);
-    const allowedTypes = ['normal', 'score', 'win', 'lose'];
-    const safeType = allowedTypes.includes(imageType) ? imageType : 'normal';
-    return `assets/images/style/${encodeURIComponent(folder)}/${safeType}.webp`;
 }
 
 function renderCharacters(enemy) {
