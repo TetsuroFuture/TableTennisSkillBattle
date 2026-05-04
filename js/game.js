@@ -53,6 +53,16 @@ const pendingAutoSaveReasons = new Set();
 let isNewPlayerSetup = false;
 
 // ============================================================
+// Firestore書き込み管理
+// ============================================================
+
+// デバッグ用: 1セッション中のFirestore書き込み回数を追跡する
+let debugFirestoreWriteCount = 0;
+
+// 前回保存済みのプレイヤーデータのスナップショット（差分チェック用）
+let lastSavedPlayerData = null;
+
+// ============================================================
 // 画面状態管理
 // ============================================================
 
@@ -81,6 +91,13 @@ function changeScreen(screenName) {
             return;
         }
         applyCpuBattleForfeit();
+    }
+
+    // 育成画面から離れる際に変更があればまとめて保存する（逐次保存を防ぐ）
+    if (currentScreen === 'training' && screenName !== 'training') {
+        savePlayerDataIfChanged('育成結果を保存中...').catch(err => {
+            console.error('Training save on navigate failed', err);
+        });
     }
 
     SCREEN_NAMES.forEach(name => {
@@ -1356,6 +1373,64 @@ function applyPlayerDataToRuntime(data) {
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
+    // ロード直後は「保存済み」と見なしてスナップショットを記録する
+    lastSavedPlayerData = clonePlayerSnapshot(player);
+}
+
+// 前回保存済みデータとの差分チェック。変更があれば true を返す。
+function hasPlayerDataChanged(before, after) {
+    if (!before) return true;
+    const fields = [
+        'name', 'style', 'atk', 'def', 'spd', 'tec', 'sta',
+        'exp', 'usableExp', 'level', 'wins', 'losses',
+        'skills', 'equippedSkills',
+        'rate', 'ratedMatches', 'ratedWins', 'ratedLosses', 'ratedDraws', 'maxRate'
+    ];
+    for (const field of fields) {
+        if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * 差分チェックに必要なフィールドのみをコピーしたスナップショットを返す。
+ * Firestore Timestamp など structuredClone 非対応の値を含むフィールドは除外する。
+ */
+function clonePlayerSnapshot(targetPlayer) {
+    return {
+        name: targetPlayer.name,
+        style: targetPlayer.style,
+        atk: targetPlayer.atk,
+        def: targetPlayer.def,
+        spd: targetPlayer.spd,
+        tec: targetPlayer.tec,
+        sta: targetPlayer.sta,
+        exp: targetPlayer.exp,
+        usableExp: targetPlayer.usableExp,
+        level: targetPlayer.level,
+        wins: targetPlayer.wins,
+        losses: targetPlayer.losses,
+        skills: Array.isArray(targetPlayer.skills) ? [...targetPlayer.skills] : [],
+        equippedSkills: Array.isArray(targetPlayer.equippedSkills) ? [...targetPlayer.equippedSkills] : [],
+        rate: targetPlayer.rate,
+        ratedMatches: targetPlayer.ratedMatches,
+        ratedWins: targetPlayer.ratedWins,
+        ratedLosses: targetPlayer.ratedLosses,
+        ratedDraws: targetPlayer.ratedDraws,
+        maxRate: targetPlayer.maxRate
+    };
+}
+
+// 変更がある場合のみFirestoreへ保存する共通関数
+async function savePlayerDataIfChanged(saveLabel = '保存中...') {
+    if (!hasPlayerDataChanged(lastSavedPlayerData, player)) {
+        console.log(`Firestore write skipped (${saveLabel}): no changes detected (total writes: ${debugFirestoreWriteCount})`);
+        updateSaveStatus('変更なし（保存スキップ）');
+        return true;
+    }
+    return savePlayerData(saveLabel);
 }
 
 async function savePlayerData(saveLabel = '保存中...') {
@@ -1370,6 +1445,10 @@ async function savePlayerData(saveLabel = '保存中...') {
         const saveData = mapPlayerToFirestoreData(player, currentPlayerId);
 
         await docRef.set(saveData, { merge: true });
+
+        debugFirestoreWriteCount++;
+        console.log(`Firestore write count: ${debugFirestoreWriteCount} (${saveLabel})`);
+        lastSavedPlayerData = clonePlayerSnapshot(player);
 
         updateSaveStatus(`保存完了 (${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })})`);
         return true;
@@ -1426,7 +1505,7 @@ function autoSavePlayer(reason = 'auto') {
         autoSaveTimerId = null;
 
         const label = getAutoSaveLabel(reasons);
-        savePlayerData(label).catch(error => {
+        savePlayerDataIfChanged(label).catch(error => {
             console.error('Auto save failed', error);
         });
     }, 250);
@@ -1442,6 +1521,9 @@ async function saveMatchResult(matchResult) {
     }
 
     try {
+        // バトルログはFirestoreに保存しない（書き込み量削減のため）。
+        // ログはメモリ上（battleLines）に保持され、バトル結果画面の表示には引き続き利用される。
+        // Firestoreには最小限のサマリーのみ保存する。
         await db.collection('matches').add({
             playerId: currentPlayerId,
             playerName: player.name,
@@ -1458,10 +1540,11 @@ async function saveMatchResult(matchResult) {
             roundsWon: Number.isFinite(matchResult.roundsWon) ? matchResult.roundsWon : null,
             isChampion: Boolean(matchResult.isChampion),
             rateChange: Number.isFinite(matchResult.rateChange) ? matchResult.rateChange : null,
-            log: Array.isArray(matchResult.log) ? matchResult.log : [],
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        debugFirestoreWriteCount++;
+        console.log(`Firestore write count: ${debugFirestoreWriteCount} (match result)`);
         return true;
     } catch (error) {
         console.error('Failed to save match result', error);
@@ -1497,6 +1580,10 @@ async function loadOrCreatePlayerData() {
             ...mapPlayerToFirestoreData(player, currentPlayerId),
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
+
+        debugFirestoreWriteCount++;
+        console.log(`Firestore write count: ${debugFirestoreWriteCount} (new player created)`);
+        lastSavedPlayerData = clonePlayerSnapshot(player);
 
         updateSaveStatus('新規プレイヤー作成完了');
         addLog('初回アクセスのため、新規プレイヤーデータを作成しました。', 'info');
@@ -2037,7 +2124,10 @@ function addSkillToPlayer(targetPlayer, skillId) {
 
     targetPlayer.skills.push(skillId);
     addLog(`スキルカード「${skill.name}」を獲得しました！`, 'success');
-    autoSavePlayer('skill_gained');
+    // スキル獲得時の個別保存は廃止。呼び出し元が保存責任を持つ:
+    //  - 育成画面（setupTrainingButtons / spendExpForRandomSkill）: 画面遷移時に一括保存
+    //  - 初回セットアップ（completeInitialSetup*）: autoSavePlayer('initial_setup') で保存
+    //  - 試合終了時（applyMatchResult / startTournament）: autoSavePlayer('match_finished') で保存
     return true;
 }
 
@@ -3692,14 +3782,11 @@ function setupTrainingButtons() {
 
             player.usableExp -= expCost;
             player[stat] += 1;
-            autoSavePlayer('training_upgraded');
+            // 育成ボタンクリックごとの個別保存は廃止。画面遷移時に一括保存する。
 
             const oldLevel = player.level;
             player.level += 1;
             const levelDiff = player.level - oldLevel;
-            if (levelDiff > 0) {
-                autoSavePlayer('level_up');
-            }
 
             for (let i = 0; i < levelDiff; i += 1) {
                 if (getUnownedSkills(player).length === 0) {
@@ -4225,6 +4312,8 @@ async function completeInitialSetupWithPassword(name, styleIndex, password) {
         try {
             const hash = await hashPassword(password);
             await db.collection('players').doc(currentPlayerId).set({ passwordHash: hash }, { merge: true });
+            debugFirestoreWriteCount++;
+            console.log(`Firestore write count: ${debugFirestoreWriteCount} (initial password set)`);
             addLog('パスワードを設定しました。次回は「前に作った選手の続き」でログインできます。', 'success');
         } catch (error) {
             console.error('Failed to save password', error);
@@ -4488,6 +4577,8 @@ async function changePassword(currentPassword, newPassword) {
         }
         const newHash = await hashPassword(newPassword);
         await docRef.set({ passwordHash: newHash }, { merge: true });
+        debugFirestoreWriteCount++;
+        console.log(`Firestore write count: ${debugFirestoreWriteCount} (password changed)`);
         return { success: true };
     } catch (error) {
         console.error('Failed to change password', error);
