@@ -80,7 +80,7 @@ const BLOCKED_NAME_WORDS = [
 function normalizePlayerName(name) {
     if (typeof name !== 'string') return '';
     let normalized = name.trim();
-    // 全角英数字を半角に変換
+    // 全角英数字を半角に変換 (全角と半角のUnicodeオフセット差: U+FF00 - U+0020 = 0xFEE0)
     normalized = normalized.replace(/[Ａ-Ｚａ-ｚ０-９]/g, ch =>
         String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
     );
@@ -96,6 +96,11 @@ function containsBlockedWord(name) {
     const lower = name.toLowerCase();
     return BLOCKED_NAME_WORDS.some(word => lower.includes(word.toLowerCase()));
 }
+
+// ひらがな・カタカナ・漢字・ASCII英数字・全角英数字のいずれかを含むか確認する正規表現
+// \u3040-\u309F: ひらがな, \u30A0-\u30FF: カタカナ, \u4E00-\u9FFF: CJK統合漢字
+// \u3400-\u4DBF: CJK統合漢字拡張A, \uFF10-\uFF19: 全角数字, \uFF21-\uFF3A: 全角大文字, \uFF41-\uFF5A: 全角小文字
+const VALID_NAME_CHARACTERS_REGEX = /[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5A]/;
 
 /**
  * プレイヤー名のバリデーションを行う
@@ -119,7 +124,7 @@ function validatePlayerName(name) {
     }
 
     // アルファベット・数字・日本語文字が一切含まれない（記号・絵文字のみ）場合は拒否
-    if (!/[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DBF\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5A]/.test(normalizedName)) {
+    if (!VALID_NAME_CHARACTERS_REGEX.test(normalizedName)) {
         return { valid: false, message: '記号だけの選手名は使用できません' };
     }
 
@@ -4229,7 +4234,7 @@ function setupInitialSetupOverlay() {
             nameInput.focus();
             nameInput.classList.add('setup-input-error');
             if (nameError) {
-                nameError.textContent = result.message;
+                nameError.textContent = result.message || 'この選手名は使用できません';
                 nameError.style.display = 'block';
             }
             return;
