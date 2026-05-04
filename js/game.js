@@ -606,11 +606,13 @@ function renderRatedOpponentPreview(opponent) {
         }
     }
 
-    // プレイヤーのスキルカード選択エリアを表示
+    // プレイヤーのスキルカード選択エリアを表示（未選択状態でリセット）
     const playerSkillArea = document.getElementById('ratedPlayerSkillArea');
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
+    ensurePlayerEquippedSkills(player);
+    player.equippedSkills = [];
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
 
@@ -1072,7 +1074,9 @@ function renderBattleStartScreen() {
         }
     }
 
-    // プレイヤーのスキルカード選択を表示
+    // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
+    ensurePlayerEquippedSkills(player);
+    player.equippedSkills = [];
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
 }
 
@@ -2733,27 +2737,20 @@ function renderPreBattleSkillList(containerId, infoId) {
         return;
     }
 
-    const itemsHtml = ownedSkills.map(skill => {
-        const equipped = isSkillEquipped(player, skill.id);
-        const canEquip = !equipped && equippedCount < maxSlots;
+    const isFulfilled = equippedCount >= maxSlots;
+    const promptHtml = `<div class="pre-battle-skill-prompt${isFulfilled ? ' fulfilled' : ''}">
+        ${isFulfilled
+            ? `✅ ${equippedCount}枚選択済み`
+            : `⚠️ スキルカードを選択してください（${equippedCount} / ${maxSlots}）`}
+    </div>`;
 
-        return `
-            <div class="skill-card ${equipped ? 'equipped' : ''}">
-                <div class="skill-title-row">
-                    <span class="skill-name">${skill.name}</span>
-                    <span class="skill-category">${skill.category}</span>
-                </div>
-                <div class="skill-description">${skill.description}</div>
-                ${
-                    equipped
-                        ? `<button class="skill-action-btn unequip-skill-btn" data-skill-id="${skill.id}">解除する</button>`
-                        : `<button class="skill-action-btn equip-skill-btn" data-skill-id="${skill.id}" ${canEquip ? '' : 'disabled'}>装備する</button>`
-                }
-            </div>
-        `;
+    const chipsHtml = ownedSkills.map(skill => {
+        const equipped = isSkillEquipped(player, skill.id);
+        const canSelect = !equipped && equippedCount < maxSlots;
+        return `<button class="skill-select-chip${equipped ? ' selected' : ''}" data-skill-id="${skill.id}"${!equipped && !canSelect ? ' disabled' : ''}>${skill.name}</button>`;
     }).join('');
 
-    container.innerHTML = itemsHtml;
+    container.innerHTML = `${promptHtml}<div class="pre-battle-skill-chips">${chipsHtml}</div>`;
 }
 
 // Backward-compatibility wrapper: the unified skill list replaces the old
@@ -3015,6 +3012,12 @@ function renderTrainingScreen() {
             barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
         }
     });
+
+    const buyBtn = document.getElementById('buyRandomSkillBtn');
+    if (buyBtn) {
+        const allSkillsOwned = getUnownedSkills(player).length === 0;
+        buyBtn.disabled = player.usableExp < 100 || allSkillsOwned;
+    }
 }
 
 function renderDataScreen() {
@@ -3833,13 +3836,13 @@ function setupPreBattleSkillButtons() {
 
         container.addEventListener('click', function(event) {
             const target = event.target;
-            if (target.classList.contains('equip-skill-btn')) {
+            if (target.classList.contains('skill-select-chip')) {
                 const skillId = target.getAttribute('data-skill-id');
-                equipSkill(player, skillId);
-                renderPreBattleSkillList(listId, infoId);
-            } else if (target.classList.contains('unequip-skill-btn')) {
-                const skillId = target.getAttribute('data-skill-id');
-                unequipSkill(player, skillId);
+                if (isSkillEquipped(player, skillId)) {
+                    unequipSkill(player, skillId);
+                } else {
+                    equipSkill(player, skillId);
+                }
                 renderPreBattleSkillList(listId, infoId);
             }
         });
