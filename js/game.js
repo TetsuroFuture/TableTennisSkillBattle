@@ -611,7 +611,6 @@ function renderRatedOpponentPreview(opponent) {
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
-    ensurePlayerEquippedSkills(player);
     player.equippedSkills = [];
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
@@ -1075,7 +1074,6 @@ function renderBattleStartScreen() {
     }
 
     // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
-    ensurePlayerEquippedSkills(player);
     player.equippedSkills = [];
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
 }
@@ -2747,7 +2745,8 @@ function renderPreBattleSkillList(containerId, infoId) {
     const chipsHtml = ownedSkills.map(skill => {
         const equipped = isSkillEquipped(player, skill.id);
         const canSelect = !equipped && equippedCount < maxSlots;
-        return `<button class="skill-select-chip${equipped ? ' selected' : ''}" data-skill-id="${skill.id}"${!equipped && !canSelect ? ' disabled' : ''}>${skill.name}</button>`;
+        const shouldDisable = !equipped && !canSelect;
+        return `<button class="skill-select-chip${equipped ? ' selected' : ''}" data-skill-id="${skill.id}"${shouldDisable ? ' disabled' : ''}>${skill.name}</button>`;
     }).join('');
 
     container.innerHTML = `${promptHtml}<div class="pre-battle-skill-chips">${chipsHtml}</div>`;
