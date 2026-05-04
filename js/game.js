@@ -694,6 +694,15 @@ function getRataCharacterImageSrc(styleName, state) {
     return `assets/images/style/${folder}/${state}.webp`;
 }
 
+/**
+ * キャラクター画像の src を指定した状態の画像に差し替える。
+ */
+function _replaceRataImageState(imgEl, newState) {
+    if (imgEl && imgEl.src) {
+        imgEl.src = imgEl.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${newState}.webp`);
+    }
+}
+
 function showRatedBattleAnimation(result) {
     pendingRatedMatchResult = result;
     ratedAnimationAborted = false;
@@ -860,20 +869,16 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
     loserChar.classList.add('anim-lose-point');
 
     // 得点者の画像を score 状態へ切り替える
-    if (scorerImg && scorerImg.src) {
-        scorerImg.src = scorerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/score.webp');
+    if (scorerImg) {
+        _replaceRataImageState(scorerImg, 'score');
     }
 
     setTimeout(() => {
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
         // 画像を normal 状態に戻す
-        if (playerImg && playerImg.src) {
-            playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
-        if (opponentImg && opponentImg.src) {
-            opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
+        _replaceRataImageState(playerImg, 'normal');
+        _replaceRataImageState(opponentImg, 'normal');
     }, 800);
 }
 
@@ -931,12 +936,8 @@ function _showRatedBattleResultSummary(result) {
         opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
     }
     // 勝敗画像へ切り替える
-    if (playerImg && playerImg.src) {
-        playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'win' : 'lose'}.webp`);
-    }
-    if (opponentImg && opponentImg.src) {
-        opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
-    }
+    _replaceRataImageState(playerImg, result.isPlayerWin ? 'win' : 'lose');
+    _replaceRataImageState(opponentImg, result.isPlayerWin ? 'lose' : 'win');
 
     const skipBtn = document.getElementById('rataSkipBtn');
     if (skipBtn) {
