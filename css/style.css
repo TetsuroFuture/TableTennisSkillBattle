@@ -2745,7 +2745,56 @@ section h3 {
     background: linear-gradient(135deg, #845ef7, #5c7cfa);
 }
 
-.skill-acquire-btn:hover {
+.skill-acquire-btn:hover:not(:disabled) {
     box-shadow: 0 6px 16px rgba(92, 124, 250, 0.4);
+}
+
+.skill-acquire-btn:disabled {
+    filter: grayscale(100%);
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 対戦前スキル選択プロンプト */
+.pre-battle-skill-prompt {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e03131;
+    margin-bottom: 8px;
+}
+
+.pre-battle-skill-prompt.fulfilled {
+    color: #2f9e44;
+}
+
+/* 対戦前スキル選択チップ */
+.pre-battle-skill-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.skill-select-chip {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid #ced4da;
+    background: #f8f9fa;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #495057;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.skill-select-chip.selected {
+    background: #20c997;
+    border-color: #20c997;
+    color: white;
+}
+
+.skill-select-chip:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
 }
 
