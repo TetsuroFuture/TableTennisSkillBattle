@@ -45,6 +45,22 @@ const BALANCE_CONFIG = {
   }
 };
 
+// ============================================================
+// 戦型別ステータス上限
+// ============================================================
+
+const STYLE_STAT_CAPS = {
+    0: { atk: 120, def: 80,  spd: 130, tec: 100, sta: 90  }, // 前陣速攻型
+    1: { atk: 125, def: 85,  spd: 100, tec: 120, sta: 90  }, // オールフォア型
+    2: { atk: 135, def: 85,  spd: 90,  tec: 100, sta: 120 }, // パワー両ハンド型
+    3: { atk: 90,  def: 125, spd: 95,  tec: 125, sta: 100 }, // ブロック＆カウンター型
+    4: { atk: 125, def: 95,  spd: 100, tec: 125, sta: 85  }, // 一撃カウンター型
+    5: { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 }, // オールラウンド型
+    6: { atk: 80,  def: 120, spd: 95,  tec: 130, sta: 105 }, // ペン粒型
+    7: { atk: 85,  def: 135, spd: 80,  tec: 110, sta: 130 }, // カットマン型
+    8: { atk: 105, def: 115, spd: 105, tec: 125, sta: 95  }  // 異質攻守型
+};
+
 let db = null;
 let isFirebaseReady = false;
 let currentPlayerId = null;
@@ -277,8 +293,8 @@ function setupBattleModeSelectButtons() {
 // 全国Rate対戦開始画面
 // ============================================================
 
-const RATED_PROVISIONAL_THRESHOLD = 50;
-const MAX_PROVISIONAL_PENALTY = 500;
+const RATED_PROVISIONAL_THRESHOLD = 20;
+const MAX_PROVISIONAL_PENALTY = 300;
 const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
 const MAX_OPPONENT_FETCH_SIZE = 50;
@@ -412,6 +428,8 @@ function renderRatedBattleSummary(targetPlayer) {
             provisionalEl.style.display = 'none';
         }
     }
+
+    renderLevelEquipSlotInfo('rated', targetPlayer);
 }
 
 async function renderRecentRatedBattleList(playerId) {
@@ -643,11 +661,20 @@ function renderRatedOpponentPreview(opponent) {
     if (rateEl) {
         rateEl.textContent = `Rate ${opponentDisplayRate}`;
     }
+
+    let styleName = '不明';
     if (styleEl) {
-        const styleName = Number.isFinite(opponent.style) && styles[opponent.style]
+        styleName = Number.isFinite(opponent.style) && styles[opponent.style]
             ? styles[opponent.style].name
             : '不明';
         styleEl.textContent = `戦型: ${styleName}`;
+    }
+
+    // 相手戦型ミニ画像
+    const opponentCharImgEl = document.getElementById('ratedOpponentCharImg');
+    if (opponentCharImgEl) {
+        opponentCharImgEl.src = getStyleMiniImageSrc(opponent.style);
+        opponentCharImgEl.alt = styleName;
     }
 
     if (diffEl) {
@@ -696,12 +723,12 @@ function renderRatedOpponentPreview(opponent) {
         }
     }
 
-    // プレイヤーのスキルカード選択エリアを表示（未選択状態でリセット）
+    // プレイヤーのスキルカード選択エリアを表示（現在の装備状態を維持）
     const playerSkillArea = document.getElementById('ratedPlayerSkillArea');
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
-    player.equippedSkills = [];
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
 
@@ -851,11 +878,49 @@ function getStyleImageFolder(styleName) {
 }
 
 /**
- * 戦型名と状態（normal/score/win/lose）から画像パスを返す。
+ * 戦型名と状態（normal/score/conceded/win/lose）から画像パスを返す。
  */
 function getRataCharacterImageSrc(styleName, state) {
     const folder = getStyleImageFolder(styleName);
     return `assets/images/style/${folder}/${state}.webp`;
+}
+
+/**
+ * 戦型インデックスからノーマル状態の画像パスを返す。
+ */
+function getStyleMiniImageSrc(styleId) {
+    const styleName = (Number.isFinite(styleId) && styles[styleId])
+        ? styles[styleId].name
+        : 'オールラウンド型';
+    return getRataCharacterImageSrc(styleName, 'normal');
+ * キャラクター画像の状態を切り替える共通関数。
+ * @param {HTMLImageElement} imgEl - 対象の img 要素
+ * @param {string} state - 切り替え先の状態（normal/score/conceded/win/lose）
+ */
+function replaceRataImageState(imgEl, state) {
+    if (!imgEl || !imgEl.src) {
+        return;
+    }
+
+    imgEl.src = imgEl.src.replace(
+        /\/(normal|score|conceded|win|lose)\.webp$/,
+        `/${state}.webp`
+    );
+}
+
+/**
+ * 画像読み込みエラー時に normal.webp へフォールバックする設定を行う。
+ * @param {HTMLImageElement} imgEl - 対象の img 要素
+ */
+function setupRataImageFallback(imgEl) {
+    if (!imgEl) {
+        return;
+    }
+
+    imgEl.onerror = () => {
+        imgEl.onerror = null;
+        replaceRataImageState(imgEl, 'normal');
+    };
 }
 
 function showRatedBattleAnimation(result) {
@@ -893,9 +958,11 @@ function showRatedBattleAnimation(result) {
     const opponentImgEl = document.getElementById('rata-opponent-img');
     if (playerImgEl) {
         playerImgEl.src = getRataCharacterImageSrc(playerStyleName, 'normal');
+        setupRataImageFallback(playerImgEl);
     }
     if (opponentImgEl) {
         opponentImgEl.src = getRataCharacterImageSrc(opponentStyleName, 'normal');
+        setupRataImageFallback(opponentImgEl);
     }
 
     // アニメーションクラスをリセットする
@@ -1018,26 +1085,22 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
     const scorerChar = pointWinner === 'player' ? playerChar : opponentChar;
     const loserChar = pointWinner === 'player' ? opponentChar : playerChar;
     const scorerImg = pointWinner === 'player' ? playerImg : opponentImg;
+    const loserImg = pointWinner === 'player' ? opponentImg : playerImg;
 
     const scoreClass = animationType === 'skill' ? 'anim-skill' : 'anim-score';
     scorerChar.classList.add(scoreClass);
     loserChar.classList.add('anim-lose-point');
 
-    // 得点者の画像を score 状態へ切り替える
-    if (scorerImg && scorerImg.src) {
-        scorerImg.src = scorerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/score.webp');
-    }
+    // 得点者は score、失点者は conceded 状態に切り替える
+    replaceRataImageState(scorerImg, 'score');
+    replaceRataImageState(loserImg, 'conceded');
 
     setTimeout(() => {
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
-        // 画像を normal 状態に戻す
-        if (playerImg && playerImg.src) {
-            playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
-        if (opponentImg && opponentImg.src) {
-            opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
+        // 両者の画像を normal 状態に戻す
+        replaceRataImageState(playerImg, 'normal');
+        replaceRataImageState(opponentImg, 'normal');
     }, 800);
 }
 
@@ -1095,12 +1158,8 @@ function _showRatedBattleResultSummary(result) {
         opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
     }
     // 勝敗画像へ切り替える
-    if (playerImg && playerImg.src) {
-        playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'win' : 'lose'}.webp`);
-    }
-    if (opponentImg && opponentImg.src) {
-        opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
-    }
+    replaceRataImageState(playerImg, result.isPlayerWin ? 'win' : 'lose');
+    replaceRataImageState(opponentImg, result.isPlayerWin ? 'lose' : 'win');
 
     const resultBtn = document.getElementById('rataResultBtn');
     if (resultBtn) {
@@ -1142,11 +1201,27 @@ function renderBattleStartScreen() {
     playerStatsEl.textContent =
         `ATK: ${player.atk}  DEF: ${player.def}  SPD: ${player.spd}  TEC: ${player.tec}  STA: ${player.sta}`;
 
+    // プレイヤー戦型ミニ画像
+    const playerCharImgEl = document.getElementById('bsPlayerCharImg');
+    if (playerCharImgEl) {
+        playerCharImgEl.src = getStyleMiniImageSrc(player.style);
+        playerCharImgEl.alt = player.style !== null ? styles[player.style].name : '';
+    }
+
     battleStartCpu = createCpuOpponent();
     cpuNameEl.textContent = battleStartCpu.name;
     cpuStyleEl.textContent = styles[battleStartCpu.style].name;
     cpuStatsEl.textContent =
         `ATK: ${battleStartCpu.atk}  DEF: ${battleStartCpu.def}  SPD: ${battleStartCpu.spd}  TEC: ${battleStartCpu.tec}  STA: ${battleStartCpu.sta}`;
+
+    // CPU戦型ミニ画像
+    const cpuCharImgEl = document.getElementById('bsCpuCharImg');
+    if (cpuCharImgEl) {
+        cpuCharImgEl.src = getStyleMiniImageSrc(battleStartCpu.style);
+        cpuCharImgEl.alt = (battleStartCpu.style != null && styles[battleStartCpu.style])
+            ? styles[battleStartCpu.style].name
+            : '';
+    }
 
     // CPUの装備スキルを表示
     const cpuSkillsEl = document.getElementById('bsCpuSkills');
@@ -1163,9 +1238,48 @@ function renderBattleStartScreen() {
         }
     }
 
-    // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
-    player.equippedSkills = [];
+    // プレイヤーのスキルカード選択を表示（現在の装備状態を維持）
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
+    renderLevelEquipSlotInfo('bs', player);
+}
+
+function formatAdvantageDelta(value) {
+    const percent = Math.round(value * 100);
+    return `${percent >= 0 ? '+' : ''}${percent}%`;
+}
+
+function formatAdvantagePercent(value) {
+    return `${Math.round(value * 100)}%`;
+}
+
+function renderAdvantageBreakdown(result) {
+    const card = document.getElementById('brAdvantageCard');
+    const breakdown = result.advantageBreakdown;
+
+    if (!card) {
+        return;
+    }
+
+    if (!breakdown) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+
+    const setEl = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setEl('brAdvantageBase', formatAdvantageDelta(breakdown.baseAdvantage || 0));
+    setEl('brAdvantageMatchup', formatAdvantageDelta(breakdown.matchupBonus || 0));
+    setEl('brAdvantageSkill', formatAdvantageDelta(breakdown.skillBonus || 0));
+    setEl('brAdvantageTactic', formatAdvantageDelta(breakdown.tacticBonus || 0));
+    setEl('brAdvantagePointRate', formatAdvantagePercent(breakdown.pointWinRate ?? 0.5));
 }
 
 // ============================================================
@@ -1209,6 +1323,16 @@ function renderBattleResultScreen() {
     setEl('brPlayerExp', `${r.playerExp} EXP`);
     setEl('brRecord', `${r.playerWins}勝 ${r.playerLosses}敗`);
 
+    const finalScoreRow = document.getElementById('brFinalScoreRow');
+    if (finalScoreRow) {
+        if (Number.isFinite(r.playerScore) && Number.isFinite(r.enemyScore)) {
+            setEl('brFinalScore', `${r.playerScore} - ${r.enemyScore}`);
+            finalScoreRow.style.display = '';
+        } else {
+            finalScoreRow.style.display = 'none';
+        }
+    }
+
     const rateChangeRow = document.getElementById('brRateChangeRow');
     if (rateChangeRow) {
         if (r.mode === 'rated' && r.rateChange !== null) {
@@ -1240,6 +1364,52 @@ function renderBattleResultScreen() {
         logEl.innerHTML = r.battleLines
             .map(line => `<div class="battle-log-entry">${line}</div>`)
             .join('');
+    }
+
+    const analysisCard = document.getElementById('brAnalysisCard');
+    if (analysisCard) {
+        if (!r.isTournament) {
+            const analysis = r.postMatchAnalysis || {};
+            setEl('brResultComment', analysis.resultComment || '試合内容を振り返りましょう。');
+            setEl('brKeyPoint', analysis.keyPoint || '育成・スキル・作戦の組み合わせが勝敗に影響します。');
+            setEl('brNextAdvice', analysis.nextAdvice || '次の試合では作戦やスキル装備を変えてみましょう。');
+            analysisCard.style.display = '';
+        } else {
+            analysisCard.style.display = 'none';
+        }
+    }
+
+    renderAdvantageBreakdown(r);
+    renderBattleResultLevelUpInfo(r);
+}
+
+function renderBattleResultLevelUpInfo(result) {
+    const card = document.getElementById('brLevelUpCard');
+    const levelText = document.getElementById('brLevelUpText');
+    const slotText = document.getElementById('brEquipSlotUpText');
+
+    if (!card || !levelText || !slotText) {
+        return;
+    }
+
+    const info = result.levelUpInfo;
+
+    if (!info || !info.didLevelUp) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    levelText.textContent = `Lv ${info.levelBefore} → Lv ${info.levelAfter}`;
+
+    if (info.didEquipSlotIncrease) {
+        slotText.textContent =
+            `スキル装備枠が増えました！ ${info.slotsBefore}枠 → ${info.slotsAfter}枠`;
+    } else {
+        const nextInfo = getNextEquipSlotUnlockInfo(info.levelAfter);
+        slotText.textContent = nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です';
     }
 }
 
@@ -1446,6 +1616,8 @@ function applyPlayerDataToRuntime(data) {
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
+    // プレリリース版では全スキル解放のため、ロード後に全スキルを付与する。
+    unlockAllSkills(player);
     // ロード直後は「保存済み」と見なしてスナップショットを記録する
     lastSavedPlayerData = clonePlayerSnapshot(player);
 }
@@ -2152,8 +2324,8 @@ function getEquippedSkillObjects(targetPlayer) {
     ensurePlayerEquippedSkills(targetPlayer);
     cleanupEquippedSkills(targetPlayer);
 
+    // プレリリース版では全スキル解放のため、skills 配列によるフィルタは行わない。
     return targetPlayer.equippedSkills
-        .filter(skillId => targetPlayer.skills.includes(skillId))
         .map(skillId => getSkillById(skillId))
         .filter(skill => skill !== null);
 }
@@ -2171,6 +2343,40 @@ function getMaxEquipSlots(level) {
     return 2;
 }
 
+function getNextEquipSlotUnlockInfo(level) {
+    if (level < 5) {
+        return { nextLevel: 5, nextSlots: 3 };
+    }
+    if (level < 10) {
+        return { nextLevel: 10, nextSlots: 4 };
+    }
+    if (level < 20) {
+        return { nextLevel: 20, nextSlots: 5 };
+    }
+    return null;
+}
+
+function getLevelEquipSlotSummary(targetPlayer) {
+    const level = Number.isFinite(targetPlayer.level) ? targetPlayer.level : 1;
+    const currentSlots = getMaxEquipSlots(level);
+    const nextInfo = getNextEquipSlotUnlockInfo(level);
+
+    return {
+        level,
+        currentSlots,
+        nextInfo,
+        mainText: `Lv ${level}　装備枠 ${currentSlots}`,
+        nextText: nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です'
+    };
+}
+
+function getEquippedSkillCount(targetPlayer) {
+    ensurePlayerEquippedSkills(targetPlayer);
+    return targetPlayer.equippedSkills.length;
+}
+
 function ensurePlayerSkills(targetPlayer) {
     if (!Array.isArray(targetPlayer.skills)) {
         targetPlayer.skills = [];
@@ -2178,8 +2384,22 @@ function ensurePlayerSkills(targetPlayer) {
 }
 
 function hasSkill(targetPlayer, skillId) {
+    // プレリリース版では全スキル解放のため、スキルが存在するIDであれば所持扱いとする。
+    // targetPlayer は将来の収集要素復活に備えて引数として残す（後方互換性）。
+    return Boolean(getSkillById(skillId));
+}
+
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
+function unlockAllSkills(targetPlayer) {
     ensurePlayerSkills(targetPlayer);
-    return targetPlayer.skills.includes(skillId);
+    const ownedSet = new Set(targetPlayer.skills);
+    for (const skill of skillCards) {
+        if (!ownedSet.has(skill.id)) {
+            targetPlayer.skills.push(skill.id);
+            ownedSet.add(skill.id);
+        }
+    }
 }
 
 function addSkillToPlayer(targetPlayer, skillId) {
@@ -2215,10 +2435,7 @@ function equipSkill(targetPlayer, skillId) {
         return false;
     }
 
-    if (!hasSkill(targetPlayer, skillId)) {
-        addLog(`未所持のスキル「${skill.name}」は装備できません。`, 'warning');
-        return false;
-    }
+    // プレリリース版では全スキル解放のため、所持チェックは省略。
 
     if (isSkillEquipped(targetPlayer, skillId)) {
         addLog(`スキル「${skill.name}」はすでに装備中です。`, 'info');
@@ -2292,6 +2509,8 @@ function isSkillEquipped(targetPlayer, skillId) {
     return targetPlayer.equippedSkills.includes(skillId);
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function gainRandomSkill(targetPlayer) {
     const unownedSkills = getUnownedSkills(targetPlayer);
 
@@ -2498,10 +2717,46 @@ function generateSkillBattleLogs(targetPlayer, context = {}) {
 }
 
 function calculateBattleSkillBonus(targetPlayer, context = {}) {
-    // Phase7(先行)では未実装: バトルイベント補正はまだ適用しない
-    void targetPlayer;
-    void context;
-    return 0;
+    const equippedSkills = getEquippedSkillObjects(targetPlayer);
+    let bonus = 0;
+
+    equippedSkills.forEach(skill => {
+        const effects = skill.effects || {};
+
+        if (effects.finishRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.attackChainRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.counterRate) {
+            bonus += 0.04;
+        }
+
+        if (effects.counterEventRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.enemyMistakeRate) {
+            bonus += 0.03;
+        }
+
+        if (context.isDisadvantage && effects.comebackEventRate) {
+            bonus += 0.05;
+        }
+
+        if (effects.randomRangeRate) {
+            bonus += 0.02;
+        }
+
+        if (effects.enemyFinishRate) {
+            bonus += 0.03;
+        }
+    });
+
+    return clamp(bonus, -0.08, 0.10);
 }
 
 function applyEnemyDebuffFromSkills(owner, enemyEffective, activationContext) {
@@ -2729,7 +2984,19 @@ function simulateBattleWithOptions(options = {}) {
     const finalWinRate = clampWinRate(
         baseRate + adjustedMatchupModifier + skillWinRateBonus + skillBattleBonus + tacticWinRateBonus
     );
-    const isPlayerWin = Math.random() < finalWinRate;
+    const pointMatch = simulatePointMatch(finalWinRate);
+    const isPlayerWin = pointMatch.isPlayerWin;
+
+    const advantageBreakdown = {
+        baseRate,
+        baseAdvantage: baseRate - 0.5,
+        matchupBonus: adjustedMatchupModifier,
+        skillBonus: skillWinRateBonus + skillBattleBonus,
+        skillWinRateBonus,
+        skillBattleBonus,
+        tacticBonus: tacticWinRateBonus,
+        pointWinRate: finalWinRate
+    };
 
     const battleLines = [
         ...generateModeStartLog(mode, enemy),
@@ -2752,6 +3019,10 @@ function simulateBattleWithOptions(options = {}) {
         playerPower,
         cpuPower,
         finalWinRate,
+        advantageBreakdown,
+        pointMatch,
+        playerScore: pointMatch.playerScore,
+        enemyScore: pointMatch.enemyScore,
         isPlayerWin,
         battleLines,
         roundIndex,
@@ -2838,6 +3109,27 @@ function updateStyleInfo() {
 }
 
 function renderHomeScreen() {
+    renderLevelEquipSlotInfo('home', player);
+}
+
+function renderLevelEquipSlotInfo(prefix, targetPlayer) {
+    const summary = getLevelEquipSlotSummary(targetPlayer);
+    const equippedCount = getEquippedSkillCount(targetPlayer);
+
+    const levelEl = document.getElementById(`${prefix}PlayerLevel`);
+    if (levelEl) {
+        levelEl.textContent = `Lv ${summary.level}`;
+    }
+
+    const slotsEl = document.getElementById(`${prefix}EquipSlots`);
+    if (slotsEl) {
+        slotsEl.textContent = `${equippedCount} / ${summary.currentSlots}`;
+    }
+
+    const nextEl = document.getElementById(`${prefix}NextEquipSlot`);
+    if (nextEl) {
+        nextEl.textContent = summary.nextText;
+    }
 }
 
 function renderUnifiedSkillList() {
@@ -2846,21 +3138,9 @@ function renderUnifiedSkillList() {
         return;
     }
 
+    // プレリリース版では全スキル解放のため、未取得表示は行わない。
     const itemsHtml = skillCards.map(skill => {
-        const owned = hasSkill(player, skill.id);
         const equipped = isSkillEquipped(player, skill.id);
-
-        if (!owned) {
-            return `
-                <div class="skill-card skill-unacquired">
-                    <div class="skill-title-row">
-                        <span class="skill-name">???</span>
-                        <span class="skill-category">???</span>
-                    </div>
-                    <div class="skill-description">???</div>
-                </div>
-            `;
-        }
 
         return `
             <div class="skill-card ${equipped ? 'equipped' : ''}">
@@ -2892,11 +3172,8 @@ function renderPreBattleSkillList(containerId, infoId) {
         infoElement.textContent = `装備中 ${equippedCount} / ${maxSlots}`;
     }
 
-    const ownedSkills = getOwnedSkills(player);
-    if (ownedSkills.length === 0) {
-        container.innerHTML = '<div class="skill-empty">スキルカードを持っていません</div>';
-        return;
-    }
+    // プレリリース版では全スキル解放のため、全スキルカードから選択できる。
+    const availableSkills = skillCards;
 
     const isFulfilled = equippedCount >= maxSlots;
     const promptHtml = `<div class="pre-battle-skill-prompt${isFulfilled ? ' fulfilled' : ''}">
@@ -2905,7 +3182,7 @@ function renderPreBattleSkillList(containerId, infoId) {
             : `⚠️ スキルカードを選択してください（${equippedCount} / ${maxSlots}）`}
     </div>`;
 
-    const chipsHtml = ownedSkills.map(skill => {
+    const chipsHtml = availableSkills.map(skill => {
         const equipped = isSkillEquipped(player, skill.id);
         const canSelect = !equipped && equippedCount < maxSlots;
         const shouldDisable = !equipped && !canSelect;
@@ -3161,25 +3438,13 @@ function renderTrainingScreen() {
         trainingPlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
     }
 
-    const maxStat = 50;
-    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
-    statKeys.forEach(label => {
-        const key = label.toLowerCase();
-        const valEl = document.getElementById(`trainingStat${label}`);
-        if (valEl) {
-            valEl.textContent = player[key];
-        }
-        const barEl = document.getElementById(`training${label}Bar`);
-        if (barEl) {
-            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
-        }
-    });
+    renderStatRows('trainingStatList', player);
+    renderTrainingCompleteCard();
 
-    const buyBtn = document.getElementById('buyRandomSkillBtn');
-    if (buyBtn) {
-        const allSkillsOwned = getUnownedSkills(player).length === 0;
-        buyBtn.disabled = player.usableExp < 100 || allSkillsOwned;
-    }
+    // プレリリース版ではランダムスキル獲得ボタンはHTMLで非表示。
+    // ボタンが存在しても何もしない。
+
+    renderLevelEquipSlotInfo('training', player);
 }
 
 function renderDataScreen() {
@@ -3251,6 +3516,8 @@ function renderDataScreen() {
             dataWinRate.textContent = '-';
         }
     }
+
+    renderStatRows('dataStatList', player);
 }
 
 function renderAll() {
@@ -3530,6 +3797,60 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
     return { lines, playerScore, cpuScore };
 }
 
+/**
+ * 1点ごとの得点確率を使って11点先取・デュースありの試合をシミュレートする。
+ * @param {number} pointWinRate - プレイヤーが1点を取る確率（0〜1）
+ * @param {object} [options]
+ * @param {number} [options.targetScore=11] - 先取点数
+ * @param {number} [options.requiredDiff=2] - 勝利に必要な点差
+ * @param {number} [options.maxScore=30] - 極端な長期デュース防止のための最大スコア上限
+ * @returns {{isPlayerWin: boolean, playerScore: number, enemyScore: number, pointResults: Array}}
+ */
+function simulatePointMatch(pointWinRate, options = {}) {
+    const targetScore = options.targetScore || 11;
+    const requiredDiff = options.requiredDiff || 2;
+    const maxScore = options.maxScore || 30;
+
+    let playerScore = 0;
+    let enemyScore = 0;
+    const pointResults = [];
+
+    while (true) {
+        const isPlayerPoint = Math.random() < pointWinRate;
+
+        if (isPlayerPoint) {
+            playerScore += 1;
+        } else {
+            enemyScore += 1;
+        }
+
+        pointResults.push({
+            playerScore,
+            enemyScore,
+            winner: isPlayerPoint ? 'player' : 'enemy'
+        });
+
+        const reachedTarget = playerScore >= targetScore || enemyScore >= targetScore;
+        const scoreDiff = Math.abs(playerScore - enemyScore);
+
+        if (reachedTarget && scoreDiff >= requiredDiff) {
+            break;
+        }
+
+        // 極端な長期デュース防止
+        if (playerScore >= maxScore || enemyScore >= maxScore) {
+            break;
+        }
+    }
+
+    return {
+        isPlayerWin: playerScore > enemyScore,
+        playerScore,
+        enemyScore,
+        pointResults
+    };
+}
+
 function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines, playerName, cpuName) {
     const playerStyleName = styles[playerStyleId].name;
     const cpuStyleName = styles[cpuStyleId].name;
@@ -3618,6 +3939,85 @@ function renderRivals() {
     }).join('');
 }
 
+function buildPostMatchAnalysis(result, targetPlayer) {
+    const isWin = result.isPlayerWin;
+    const matchup = Number.isFinite(result.adjustedMatchupModifier)
+        ? result.adjustedMatchupModifier
+        : 0;
+
+    const isAdvantage = matchup > 0.05;
+    const isDisadvantage = matchup < -0.05;
+
+    const tactic = getTacticById(result.tacticId);
+    const equippedSkills = getEquippedSkillObjects(targetPlayer);
+    const featuredSkill = equippedSkills[0] || null;
+
+    const playerDisplayRate = Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null;
+    const cpuDisplayRate = result.cpu
+        ? (Number.isFinite(result.cpu.displayRate) ? result.cpu.displayRate
+            : Number.isFinite(result.cpu.rate) ? result.cpu.rate : null)
+        : null;
+    const rateDiff = (playerDisplayRate !== null && cpuDisplayRate !== null)
+        ? cpuDisplayRate - playerDisplayRate
+        : null;
+    const isHigherRated = rateDiff !== null && rateDiff > 50;
+    const isLowerRated = rateDiff !== null && rateDiff < -50;
+
+    let resultComment;
+    let keyPoint;
+    let nextAdvice;
+
+    if (isWin) {
+        if (isHigherRated) {
+            resultComment = '格上相手に勝利！スキルと作戦が噛み合った会心の一戦でした。';
+        } else if (isAdvantage) {
+            resultComment = '戦型相性を活かして、試合の主導権を握りました。';
+        } else if (isDisadvantage) {
+            resultComment = '不利相性の中でも、スキルと作戦で展開を立て直しました。';
+        } else {
+            resultComment = '自分の持ち味を活かして、勝ち切ることができました。';
+        }
+    } else {
+        if (isLowerRated) {
+            resultComment = '取りこぼしの悔しい敗戦です。次は安定重視で勝ち切りたいところです。';
+        } else if (isDisadvantage) {
+            resultComment = '戦型相性の悪さが出た試合でした。';
+        } else if (isAdvantage) {
+            resultComment = '有利な展開を作れましたが、勝負所で取り切れませんでした。';
+        } else {
+            resultComment = '互角の展開でしたが、最後は相手に流れを取られました。';
+        }
+    }
+
+    if (featuredSkill) {
+        keyPoint = isWin
+            ? `装備スキル「${featuredSkill.name}」が勝負所で効きました。`
+            : `装備スキル「${featuredSkill.name}」を活かし切るには、作戦との組み合わせを見直す余地があります。`;
+    } else if (tactic) {
+        keyPoint = `作戦「${tactic.name}」が試合展開に影響しました。`;
+    } else {
+        keyPoint = '育成・スキル・作戦の組み合わせが勝敗に影響します。';
+    }
+
+    if (!isWin && isDisadvantage) {
+        nextAdvice = '次は「相性対策」を選ぶと、展開が変わるかもしれません。';
+    } else if (!isWin && tactic?.id === 'power') {
+        nextAdvice = '次は「安定重視」を選ぶと、取りこぼしを減らせそうです。';
+    } else if (isWin && isHigherRated) {
+        nextAdvice = '今の構成を軸に、さらに格上の相手にも挑戦してみましょう。';
+    } else if (isWin) {
+        nextAdvice = '今の構成を軸に、相手戦型に応じて作戦を調整してみましょう。';
+    } else {
+        nextAdvice = '次の試合では、スキル構成や作戦を少し変えてみましょう。';
+    }
+
+    return {
+        resultComment,
+        keyPoint,
+        nextAdvice
+    };
+}
+
 function applyMatchResult(result) {
     const expGained = calculateExpReward(result.mode, result.result, result);
 
@@ -3627,7 +4027,14 @@ function applyMatchResult(result) {
         player.losses += 1;
     }
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     awardExp(expGained);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     updateBattleResultView(result.cpu, result.playerPower, result.cpuPower, result.finalWinRate, result.isPlayerWin);
     renderBattleLog(result.battleLines);
     renderCharacters(result.cpu);
@@ -3673,6 +4080,8 @@ function applyMatchResult(result) {
         cpuStyle: styles[result.cpu.style].name,
         playerPower: result.playerPower,
         cpuPower: result.cpuPower,
+        playerScore: Number.isFinite(result.playerScore) ? result.playerScore : null,
+        enemyScore: Number.isFinite(result.enemyScore) ? result.enemyScore : null,
         expGained,
         battleLines: result.battleLines,
         playerLevel: player.level,
@@ -3683,7 +4092,17 @@ function applyMatchResult(result) {
         rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null,
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
-        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null
+        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        advantageBreakdown: result.advantageBreakdown || null,
+        postMatchAnalysis: buildPostMatchAnalysis(result, player),
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3730,6 +4149,9 @@ function startTournament() {
     let wins = 0;
     let lastResult = null;
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     for (let round = 1; round <= 3; round += 1) {
         const roundResult = simulateBattleWithOptions({
             mode: 'tournament',
@@ -3762,6 +4184,10 @@ function startTournament() {
     }
 
     awardExp(totalExp);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     renderBattleLog(tournamentLogs);
     updateBattleResultView(lastResult.cpu, lastResult.playerPower, lastResult.cpuPower, lastResult.finalWinRate, lastResult.isPlayerWin);
     const tournamentResult = wins === 3 ? 'win' : 'lose';
@@ -3806,7 +4232,15 @@ function startTournament() {
         playerLevel: player.level,
         playerExp: player.exp,
         playerWins: player.wins,
-        playerLosses: player.losses
+        playerLosses: player.losses,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3848,13 +4282,19 @@ function setupTrainingButtons() {
                 return;
             }
 
+            const cap = getStatCap(player.style, stat);
+            if (player[stat] >= cap) {
+                addLog(`${getStatDisplayName(stat)}はこの戦型の上限（${cap}）に達しています。`, 'warning');
+                return;
+            }
+
             if (player.usableExp < expCost) {
                 addLog(`${stat.toUpperCase()}の強化には${expCost}EXPが必要です。現在: ${player.usableExp}EXP`, 'warning');
                 return;
             }
 
             player.usableExp -= expCost;
-            player[stat] += 1;
+            player[stat] = Math.min(cap, player[stat] + 1);
             // 育成ボタンクリックごとの個別保存は廃止。画面遷移時に一括保存する。
 
             player.level += 1;
@@ -3892,6 +4332,8 @@ function setupSkillAcquisitionButton() {
     });
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function spendExpForRandomSkill() {
     const expCost = 100;
     const expReturn = 50;
@@ -4199,6 +4641,99 @@ function getStatName(stat) {
     return statNames[stat] || stat;
 }
 
+// ステータス上限を返す（戦型未選択時はfallbackを使用）
+function getStatCap(styleId, stat) {
+    const fallbackCaps = { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 };
+    const caps = STYLE_STAT_CAPS[styleId] || fallbackCaps;
+    return caps[stat] || fallbackCaps[stat] || 110;
+}
+
+// ステータス表示名を返す
+function getStatDisplayName(stat) {
+    const names = {
+        atk: '攻撃力',
+        def: '守備力',
+        spd: 'スピード',
+        tec: '技術',
+        sta: 'スタミナ'
+    };
+    return names[stat] || stat;
+}
+
+// 上限値に応じた得意/苦手ラベルを返す
+function getStatTraitLabel(cap) {
+    if (cap >= 125) return '超得意';
+    if (cap >= 115) return '得意';
+    if (cap >= 100) return '標準';
+    if (cap >= 90) return 'やや苦手';
+    return '苦手';
+}
+
+// 上限値に応じたCSSクラスを返す
+function getStatTraitClass(cap) {
+    if (cap >= 125) return 'trait-very-good';
+    if (cap >= 115) return 'trait-good';
+    if (cap >= 100) return 'trait-normal';
+    if (cap >= 90) return 'trait-weak';
+    return 'trait-very-weak';
+}
+
+// 表示用ステータス値（上限で丸める）
+function getDisplayStatValue(targetPlayer, stat) {
+    const cap = getStatCap(targetPlayer.style, stat);
+    return Math.min(targetPlayer[stat], cap);
+}
+
+// 全ステータスが上限に達しているか判定する
+function isAllStatsCapped(targetPlayer) {
+    const stats = ['atk', 'def', 'spd', 'tec', 'sta'];
+    return stats.every(stat => {
+        const cap = getStatCap(targetPlayer.style, stat);
+        return targetPlayer[stat] >= cap;
+    });
+}
+
+// 育成完成カードの表示/非表示を更新する
+function renderTrainingCompleteCard() {
+    const card = document.getElementById('trainingCompleteCard');
+    if (!card) {
+        return;
+    }
+    card.style.display = isAllStatsCapped(player) ? '' : 'none';
+}
+
+// ステータス行一覧をコンテナに描画する
+function renderStatRows(containerId, targetPlayer) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+    const stats = [
+        { key: 'atk', code: 'ATK' },
+        { key: 'def', code: 'DEF' },
+        { key: 'spd', code: 'SPD' },
+        { key: 'tec', code: 'TEC' },
+        { key: 'sta', code: 'STA' }
+    ];
+    container.innerHTML = stats.map(({ key, code }) => {
+        const cap = getStatCap(targetPlayer.style, key);
+        const displayVal = getDisplayStatValue(targetPlayer, key);
+        const percent = Math.min(100, (displayVal / cap * 100));
+        const traitLabel = getStatTraitLabel(cap);
+        const traitClass = getStatTraitClass(cap);
+        const name = getStatDisplayName(key);
+        return `<div class="stat-row">
+  <div class="stat-row-header">
+    <span class="stat-code">${code}</span>
+    <span class="stat-name">${name}</span>
+    <span class="stat-number">${displayVal} / ${cap}</span>
+    <span class="stat-trait ${traitClass}">${traitLabel}</span>
+  </div>
+  <div class="stat-bar"><div class="stat-bar-fill" style="width:${percent}%"></div></div>
+</div>`;
+    }).join('');
+}
+
 // ============================================================
 // 初回セットアップ
 // ============================================================
@@ -4260,7 +4795,10 @@ function renderSetupStyleList() {
                 <h4 class="setup-style-cat-label">${cat}</h4>
                 <div class="setup-style-buttons">
                     ${catStyles.map(style => `
-                        <button class="setup-style-btn" data-style="${style.id}">${style.name}</button>
+                        <button class="setup-style-btn" data-style="${style.id}">
+                            <img class="style-mini-icon" src="${getRataCharacterImageSrc(style.name, 'normal')}" alt="">
+                            <span class="style-btn-name">${style.name}</span>
+                        </button>
                     `).join('')}
                 </div>
             </div>

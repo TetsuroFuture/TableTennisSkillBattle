@@ -143,11 +143,11 @@
         <main class="main-content">
             <!-- ナビゲーションバー -->
             <nav class="game-nav">
-                <button class="nav-btn active" data-screen="home">🏠 HOME</button>
-                <button class="nav-btn" data-screen="training">💪 育成</button>
-                <button class="nav-btn" data-screen="battleModeSelect">⚔️ 対戦</button>
-                <button class="nav-btn" data-screen="data">📊 データ</button>
-                <button class="nav-btn" data-screen="settings">⚙️ 設定</button>
+                <button class="nav-btn active" data-screen="home">HOME</button>
+                <button class="nav-btn" data-screen="training">育成</button>
+                <button class="nav-btn" data-screen="battleModeSelect">対戦</button>
+                <button class="nav-btn" data-screen="data">データ</button>
+                <button class="nav-btn" data-screen="settings">設定</button>
             </nav>
 
             <!-- ==============================
@@ -160,25 +160,37 @@
                 <img src="assets/images/Home画面.webp" alt="卓球スキルバトル HOME画面" class="home-visual-img">
             </div>
 
+            <!-- HOME画面: プレイヤー状態 -->
+            <div class="home-player-status">
+                <span id="homePlayerLevel" class="home-player-level">Lv 1</span>
+                <span class="home-player-status-sep">　装備枠　</span>
+                <span id="homeEquipSlots" class="home-player-slots">0 / 2</span>
+                <div id="homeNextEquipSlot" class="home-next-equip-slot">次の装備枠解放：Lv5で3枠</div>
+            </div>
+
             <!-- HOME画面: メニュー -->
             <section class="home-menu-section">
-                <h2>🏓 メニュー</h2>
+                <h2>メニュー</h2>
                 <div class="home-menu-grid">
                     <button class="home-menu-card" data-screen="training">
-                        <span class="home-menu-icon">💪</span>
+                        <span class="menu-symbol menu-symbol-training"></span>
                         <span class="home-menu-label">育成</span>
+                        <span class="home-menu-sub">ステータスを強化</span>
                     </button>
                     <button class="home-menu-card" data-screen="battleModeSelect">
-                        <span class="home-menu-icon">⚔️</span>
+                        <span class="menu-symbol menu-symbol-battle"></span>
                         <span class="home-menu-label">対戦</span>
+                        <span class="home-menu-sub">Rate戦に挑む</span>
                     </button>
                     <button class="home-menu-card" data-screen="data">
-                        <span class="home-menu-icon">📊</span>
+                        <span class="menu-symbol menu-symbol-data"></span>
                         <span class="home-menu-label">データ</span>
+                        <span class="home-menu-sub">戦績を確認</span>
                     </button>
                     <button class="home-menu-card" data-screen="settings">
-                        <span class="home-menu-icon">⚙️</span>
+                        <span class="menu-symbol menu-symbol-settings"></span>
                         <span class="home-menu-label">設定</span>
+                        <span class="home-menu-sub">プロフィール管理</span>
                     </button>
                 </div>
             </section>
@@ -192,7 +204,7 @@
 
             <!-- プレイヤー情報セクション -->
             <section class="player-info training-player-section">
-                <h2>👤 選手情報</h2>
+                <h2>選手情報</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">選手名:</span>
@@ -203,47 +215,20 @@
                         <span class="value" id="trainingStyleName">未選択</span>
                     </div>
                     <div class="style-sub-desc" id="trainingStyleDesc"></div>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">ATK</div>
-                            <div class="stat-value" id="trainingStatAtk">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingAtkBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">DEF</div>
-                            <div class="stat-value" id="trainingStatDef">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingDefBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">SPD</div>
-                            <div class="stat-value" id="trainingStatSpd">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingSpdBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">TEC</div>
-                            <div class="stat-value" id="trainingStatTec">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingTecBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">STA</div>
-                            <div class="stat-value" id="trainingStatSta">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingStaBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="stat-list" id="trainingStatList"></div>
                     <div class="info-row">
                         <span class="label">EXP:</span>
                         <span class="value" id="trainingPlayerExp">0 / 使用可: 0</span>
                     </div>
+                    <div class="info-row">
+                        <span class="label">レベル:</span>
+                        <span class="value" id="trainingPlayerLevel">Lv 1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">装備枠:</span>
+                        <span class="value" id="trainingEquipSlots">0 / 2</span>
+                    </div>
+                    <div class="info-row equip-slot-next" id="trainingNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
                 </div>
             </section>
 
@@ -263,7 +248,8 @@
             <!-- スキル管理セクション -->
             <section class="skill-section">
                 <h2>スキルカード</h2>
-                <div class="skill-acquire-row">
+                <p class="skill-section-desc">スキルカードは全種類使用できます。レベルアップで装備枠が増えます。自分の戦型に合う組み合わせを選びましょう。</p>
+                <div class="skill-acquire-row pre-release-hidden">
                     <button class="skill-acquire-btn" id="buyRandomSkillBtn">🎲 ランダムスキル獲得（100EXP）</button>
                 </div>
                 <div class="skill-list" id="unifiedSkillList">
@@ -271,9 +257,16 @@
                 </div>
             </section>
 
+            <!-- 育成完成カード -->
+            <div class="training-complete-card" id="trainingCompleteCard" style="display:none;">
+                <h3>🏆 育成完成！</h3>
+                <p>この選手の基礎能力は完成しました。<br>ここからはスキル構成と作戦選択でRate戦に挑みましょう。</p>
+                <button class="nav-btn training-complete-rate-btn" data-screen="ratedBattleStart">🌏 Rate戦へ挑む</button>
+            </div>
+
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-training -->
@@ -284,7 +277,7 @@
             <div id="screen-battleModeSelect" class="game-screen" style="display:none;">
 
             <section class="battle-mode-select-section">
-                <h2>⚔️ 対戦</h2>
+                <h2>対戦</h2>
                 <p class="battle-mode-select-sub">どの戦いに挑む？</p>
 
                 <div class="battle-mode-card-list">
@@ -311,7 +304,7 @@
                 </div>
 
                 <div class="settings-back-row">
-                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
                 </div>
             </section>
 
@@ -323,7 +316,7 @@
             <div id="screen-ratedBattleStart" class="game-screen" style="display:none;">
 
             <section class="rated-battle-start-section">
-                <h2>🌏 全国Rate対戦</h2>
+                <h2>全国Rate対戦</h2>
                 <p class="rated-battle-subtitle" id="ratedBattleSubtitle">今日の道場破り</p>
                 <p class="rated-battle-desc">育てた選手で、全国のライバルに挑戦しよう！</p>
 
@@ -347,15 +340,28 @@
                         <div class="rated-provisional-remaining" id="ratedProvisionalRemaining"></div>
                         <div class="rated-provisional-hint">対戦を重ねるほど、Rateが本来の強さに近づいていきます。</div>
                     </div>
+
+                    <!-- レベル・装備枠情報 -->
+                    <div class="rated-level-info">
+                        <div class="rated-level-info-row">
+                            <span class="rated-level-label">現在の選手：</span>
+                            <span id="ratedPlayerLevel" class="rated-level-value">Lv 1</span>
+                        </div>
+                        <div class="rated-level-info-row">
+                            <span class="rated-level-label">スキル装備枠：</span>
+                            <span id="ratedEquipSlots" class="rated-level-value">0 / 2</span>
+                        </div>
+                        <div class="equip-slot-next" id="ratedNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
+                    </div>
                 </div>
 
                 <!-- 直近5試合 -->
-                <div class="rated-history-card" style="display:none;">
-                    <h3>📊 直近5試合</h3>
+                <div class="rated-history-card">
+                    <h3>直近5試合</h3>
+                    <div id="recentRatedBattleSummary" class="rated-history-summary" style="display:none;"></div>
                     <div id="recentRatedBattleList" class="rated-history-list">
                         <p class="rated-no-history">読み込み中...</p>
                     </div>
-                    <div id="recentRatedBattleSummary" class="rated-history-summary" style="display:none;"></div>
                 </div>
 
                 <!-- 検索ステータス -->
@@ -365,9 +371,14 @@
                 <div class="rated-opponent-area" id="ratedOpponentArea" style="display:none;">
                     <div class="rated-opponent-found-label">対戦相手が見つかりました！</div>
                     <div class="rated-opponent-card">
-                        <div class="rated-opponent-name" id="ratedOpponentName">-</div>
-                        <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
-                        <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
+                        <div class="rated-opponent-header">
+                            <img id="ratedOpponentCharImg" class="style-mini-icon" src="" alt="">
+                            <div class="rated-opponent-header-info">
+                                <div class="rated-opponent-name" id="ratedOpponentName">-</div>
+                                <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
+                                <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
+                            </div>
+                        </div>
                         <div class="rated-rate-diff" id="ratedRateDiff">-</div>
                         <div class="rated-opponent-stats bs-stats-summary" id="ratedOpponentStats">-</div>
                         <div class="rated-opponent-skills-area">
@@ -407,7 +418,7 @@
 
             <section class="rated-anim-section">
                 <div class="rata-header">
-                    <h2>🌏 全国Rate対戦</h2>
+                    <h2>全国Rate対戦</h2>
                     <div class="rata-matchup-names">
                         <span class="rata-player-name" id="rataPlayerName">-</span>
                         <span class="rata-vs">vs</span>
@@ -468,12 +479,13 @@
             <div id="screen-battleStart" class="game-screen" style="display:none;">
 
             <section class="battle-start-section">
-                <h2>⚔️ 試合開始</h2>
+                <h2>試合開始</h2>
 
                 <div class="battle-start-matchup">
                     <!-- プレイヤー情報 -->
                     <div class="battle-start-card player-card">
-                        <h3>👤 あなた</h3>
+                        <h3>あなた</h3>
+                        <img id="bsPlayerCharImg" class="style-mini-icon battle-start-char-img" src="" alt="">
                         <div class="info-row">
                             <span class="label">選手名:</span>
                             <span class="value" id="bsPlayerName">-</span>
@@ -483,13 +495,23 @@
                             <span class="value" id="bsPlayerStyle">-</span>
                         </div>
                         <div class="bs-stats-summary" id="bsPlayerStats">-</div>
+                        <div class="info-row">
+                            <span class="label">レベル:</span>
+                            <span class="value" id="bsPlayerLevel">Lv 1</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">装備枠:</span>
+                            <span class="value" id="bsEquipSlots">0 / 2</span>
+                        </div>
+                        <div class="equip-slot-next" id="bsNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
                     </div>
 
                     <div class="battle-start-vs">VS</div>
 
                     <!-- 対戦相手情報 -->
                     <div class="battle-start-card cpu-card">
-                        <h3>🤖 対戦相手</h3>
+                        <h3>対戦相手</h3>
+                        <img id="bsCpuCharImg" class="style-mini-icon battle-start-char-img" src="" alt="">
                         <div class="info-row">
                             <span class="label">選手名:</span>
                             <span class="value" id="bsCpuName">-</span>
@@ -620,7 +642,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-battle -->
@@ -631,7 +653,7 @@
             <div id="screen-battleResult" class="game-screen" style="display:none;">
 
             <section class="battle-result-section">
-                <h2>🏁 試合終了</h2>
+                <h2>試合終了</h2>
 
                 <!-- 対戦カード -->
                 <div class="br-info-card">
@@ -674,8 +696,55 @@
                     <span id="brResultText">-</span>
                 </div>
 
+                <!-- 試合後分析 -->
+                <div class="br-analysis-card" id="brAnalysisCard">
+                    <h3>試合後分析</h3>
+                    <div class="br-analysis-item">
+                        <span class="br-analysis-label">試合の流れ</span>
+                        <p id="brResultComment">試合内容を振り返りましょう。</p>
+                    </div>
+                    <div class="br-analysis-item">
+                        <span class="br-analysis-label">勝因 / 敗因</span>
+                        <p id="brKeyPoint">育成・スキル・作戦の組み合わせが勝敗に影響します。</p>
+                    </div>
+                    <div class="br-analysis-item">
+                        <span class="br-analysis-label">次の一手</span>
+                        <p id="brNextAdvice">次の試合では作戦やスキル装備を変えてみましょう。</p>
+                    </div>
+                </div>
+
+                <!-- 優勢度内訳 -->
+                <div class="br-advantage-card" id="brAdvantageCard">
+                    <h3>📊 優勢度内訳</h3>
+                    <div class="br-advantage-row">
+                        <span class="br-advantage-label">基本戦力差</span>
+                        <span class="br-advantage-value" id="brAdvantageBase">-</span>
+                    </div>
+                    <div class="br-advantage-row">
+                        <span class="br-advantage-label">戦型相性</span>
+                        <span class="br-advantage-value" id="brAdvantageMatchup">-</span>
+                    </div>
+                    <div class="br-advantage-row">
+                        <span class="br-advantage-label">スキル効果</span>
+                        <span class="br-advantage-value" id="brAdvantageSkill">-</span>
+                    </div>
+                    <div class="br-advantage-row">
+                        <span class="br-advantage-label">作戦効果</span>
+                        <span class="br-advantage-value" id="brAdvantageTactic">-</span>
+                    </div>
+                    <div class="br-advantage-row br-advantage-final">
+                        <span class="br-advantage-label">1本ごとの得点期待率</span>
+                        <span class="br-advantage-value" id="brAdvantagePointRate">-</span>
+                    </div>
+                    <div class="br-advantage-note">この数値は、1本ごとの得点しやすさを表します。実際の勝敗は11点先取の試合シミュレーションで決まります。</div>
+                </div>
+
                 <!-- 獲得EXP・レート -->
                 <div class="br-exp-card">
+                    <div class="br-info-row" id="brFinalScoreRow">
+                        <span class="label">最終スコア:</span>
+                        <span class="value" id="brFinalScore">-</span>
+                    </div>
                     <div class="br-info-row">
                         <span class="label">獲得EXP:</span>
                         <span class="value br-exp-value" id="brExpGained">+0 EXP</span>
@@ -710,12 +779,17 @@
                 <!-- X共有ボタン -->
                 <div class="br-share-card">
                     <button class="share-x-btn" id="shareXBtn">X（Twitter）で共有する</button>
+                <!-- レベルアップカード -->
+                <div class="br-levelup-card" id="brLevelUpCard" style="display:none;">
+                    <h3>LEVEL UP</h3>
+                    <p id="brLevelUpText"></p>
+                    <p id="brEquipSlotUpText"></p>
                 </div>
 
                 <!-- アクションボタン -->
                 <div class="br-buttons">
                     <button class="battle-btn" id="brPlayAgainBtn">🔄 もう一度試合する</button>
-                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
                 </div>
 
             </section>
@@ -729,7 +803,7 @@
 
             <!-- 全国Rate対決戦績セクション -->
             <section class="data-rated-section">
-                <h2>🌏 全国Rate対決戦績</h2>
+                <h2>全国Rate対決戦績</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">Rate:</span>
@@ -757,7 +831,7 @@
 
             <!-- CPU対戦戦績セクション -->
             <section class="data-records-section">
-                <h2>🤖 CPU対戦戦績</h2>
+                <h2>CPU対戦戦績</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">試合数:</span>
@@ -778,9 +852,15 @@
                 </div>
             </section>
 
+            <!-- ステータスセクション -->
+            <section class="data-stats-section">
+                <h2>📊 選手ステータス</h2>
+                <div class="stat-list" id="dataStatList"></div>
+            </section>
+
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-data -->
@@ -792,7 +872,7 @@
 
             <!-- プレイヤー情報セクション -->
             <section class="player-info">
-                <h2>👤 プレイヤー情報</h2>
+                <h2>プレイヤー情報</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">選手名:</span>
@@ -807,7 +887,7 @@
 
             <!-- データ保存状況セクション -->
             <section class="settings-save-section">
-                <h2>💾 データ保存状況</h2>
+                <h2>データ保存状況</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">保存状態:</span>
@@ -816,14 +896,14 @@
                 </div>
                 <div class="save-actions">
                     <!--<button class="save-btn" id="manualSaveBtn">💾 手動保存</button>-->
-                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">🔑 パスワード変更</button>
-                    <button class="save-btn save-btn-danger" id="logoutBtn">🚪 ログアウト</button>
+                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">パスワード変更</button>
+                    <button class="save-btn save-btn-danger" id="logoutBtn">ログアウト</button>
                 </div>
             </section>
 
             <!-- 操作ログセクション -->
             <section class="log-section">
-                <h2>📋 操作ログ</h2>
+                <h2>操作ログ</h2>
                 <div class="message-log" id="messageLog">
                     <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
                 </div>
@@ -831,31 +911,31 @@
 
             <!-- 設定項目セクション -->
             <section class="settings-items-section">
-                <h2>🔧 設定項目</h2>
+                <h2>設定項目</h2>
                 <div class="settings-items-list">
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">✏️</span>
+                        <span class="settings-item-icon settings-icon-profile"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">プロフィール編集</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">📝</span>
+                        <span class="settings-item-icon settings-icon-name"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">選手名変更</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">🔑</span>
+                        <span class="settings-item-icon settings-icon-password"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">パスワード変更</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">🗑️</span>
+                        <span class="settings-item-icon settings-icon-reset"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">データリセット</span>
                             <span class="settings-item-status">今後実装予定</span>
@@ -866,7 +946,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-settings -->
