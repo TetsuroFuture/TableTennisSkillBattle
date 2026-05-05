@@ -2886,3 +2886,8 @@ section h3 {
     opacity: 0.45;
 }
 
+/* プレリリース版で一時的に非表示にするUI要素 */
+.pre-release-hidden {
+    display: none;
+}
+
