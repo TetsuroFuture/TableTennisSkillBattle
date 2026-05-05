@@ -1261,6 +1261,19 @@ function renderBattleResultScreen() {
             .join('');
     }
 
+    const analysisCard = document.getElementById('brAnalysisCard');
+    if (analysisCard) {
+        if (!r.isTournament) {
+            const analysis = r.postMatchAnalysis || {};
+            setEl('brResultComment', analysis.resultComment || '試合内容を振り返りましょう。');
+            setEl('brKeyPoint', analysis.keyPoint || '育成・スキル・作戦の組み合わせが勝敗に影響します。');
+            setEl('brNextAdvice', analysis.nextAdvice || '次の試合では作戦やスキル装備を変えてみましょう。');
+            analysisCard.style.display = '';
+        } else {
+            analysisCard.style.display = 'none';
+        }
+    }
+
     renderBattleResultLevelUpInfo(r);
 }
 
@@ -3750,6 +3763,85 @@ function renderRivals() {
     }).join('');
 }
 
+function buildPostMatchAnalysis(result, targetPlayer) {
+    const isWin = result.isPlayerWin;
+    const matchup = Number.isFinite(result.adjustedMatchupModifier)
+        ? result.adjustedMatchupModifier
+        : 0;
+
+    const isAdvantage = matchup > 0.05;
+    const isDisadvantage = matchup < -0.05;
+
+    const tactic = getTacticById(result.tacticId);
+    const equippedSkills = getEquippedSkillObjects(targetPlayer);
+    const featuredSkill = equippedSkills[0] || null;
+
+    const playerDisplayRate = Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null;
+    const cpuDisplayRate = result.cpu
+        ? (Number.isFinite(result.cpu.displayRate) ? result.cpu.displayRate
+            : Number.isFinite(result.cpu.rate) ? result.cpu.rate : null)
+        : null;
+    const rateDiff = (playerDisplayRate !== null && cpuDisplayRate !== null)
+        ? cpuDisplayRate - playerDisplayRate
+        : null;
+    const isHigherRated = rateDiff !== null && rateDiff > 50;
+    const isLowerRated = rateDiff !== null && rateDiff < -50;
+
+    let resultComment;
+    let keyPoint;
+    let nextAdvice;
+
+    if (isWin) {
+        if (isHigherRated) {
+            resultComment = '格上相手に勝利！スキルと作戦が噛み合った会心の一戦でした。';
+        } else if (isAdvantage) {
+            resultComment = '戦型相性を活かして、試合の主導権を握りました。';
+        } else if (isDisadvantage) {
+            resultComment = '不利相性の中でも、スキルと作戦で展開を立て直しました。';
+        } else {
+            resultComment = '自分の持ち味を活かして、勝ち切ることができました。';
+        }
+    } else {
+        if (isLowerRated) {
+            resultComment = '取りこぼしの悔しい敗戦です。次は安定重視で勝ち切りたいところです。';
+        } else if (isDisadvantage) {
+            resultComment = '戦型相性の悪さが出た試合でした。';
+        } else if (isAdvantage) {
+            resultComment = '有利な展開を作れましたが、勝負所で取り切れませんでした。';
+        } else {
+            resultComment = '互角の展開でしたが、最後は相手に流れを取られました。';
+        }
+    }
+
+    if (featuredSkill) {
+        keyPoint = isWin
+            ? `装備スキル「${featuredSkill.name}」が勝負所で効きました。`
+            : `装備スキル「${featuredSkill.name}」を活かし切るには、作戦との組み合わせを見直す余地があります。`;
+    } else if (tactic) {
+        keyPoint = `作戦「${tactic.name}」が試合展開に影響しました。`;
+    } else {
+        keyPoint = '育成・スキル・作戦の組み合わせが勝敗に影響します。';
+    }
+
+    if (!isWin && isDisadvantage) {
+        nextAdvice = '次は「相性対策」を選ぶと、展開が変わるかもしれません。';
+    } else if (!isWin && tactic?.id === 'power') {
+        nextAdvice = '次は「安定重視」を選ぶと、取りこぼしを減らせそうです。';
+    } else if (isWin && isHigherRated) {
+        nextAdvice = '今の構成を軸に、さらに格上の相手にも挑戦してみましょう。';
+    } else if (isWin) {
+        nextAdvice = '今の構成を軸に、相手戦型に応じて作戦を調整してみましょう。';
+    } else {
+        nextAdvice = '次の試合では、スキル構成や作戦を少し変えてみましょう。';
+    }
+
+    return {
+        resultComment,
+        keyPoint,
+        nextAdvice
+    };
+}
+
 function applyMatchResult(result) {
     const expGained = calculateExpReward(result.mode, result.result, result);
 
@@ -3823,6 +3915,7 @@ function applyMatchResult(result) {
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
         ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        postMatchAnalysis: buildPostMatchAnalysis(result, player),
         levelUpInfo: {
             levelBefore,
             levelAfter,
