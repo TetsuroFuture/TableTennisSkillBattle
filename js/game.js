@@ -1168,6 +1168,44 @@ function renderBattleStartScreen() {
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
 }
 
+function formatAdvantageDelta(value) {
+    const percent = Math.round(value * 100);
+    return `${percent >= 0 ? '+' : ''}${percent}%`;
+}
+
+function formatAdvantagePercent(value) {
+    return `${Math.round(value * 100)}%`;
+}
+
+function renderAdvantageBreakdown(result) {
+    const card = document.getElementById('brAdvantageCard');
+    const breakdown = result.advantageBreakdown;
+
+    if (!card) {
+        return;
+    }
+
+    if (!breakdown) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+
+    const setEl = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setEl('brAdvantageBase', formatAdvantageDelta(breakdown.baseAdvantage || 0));
+    setEl('brAdvantageMatchup', formatAdvantageDelta(breakdown.matchupBonus || 0));
+    setEl('brAdvantageSkill', formatAdvantageDelta(breakdown.skillBonus || 0));
+    setEl('brAdvantageTactic', formatAdvantageDelta(breakdown.tacticBonus || 0));
+    setEl('brAdvantagePointRate', formatAdvantagePercent(breakdown.pointWinRate ?? 0.5));
+}
+
 // ============================================================
 
 function renderBattleResultScreen() {
@@ -1241,6 +1279,8 @@ function renderBattleResultScreen() {
             .map(line => `<div class="battle-log-entry">${line}</div>`)
             .join('');
     }
+
+    renderAdvantageBreakdown(r);
 }
 
 // ============================================================
@@ -2731,6 +2771,17 @@ function simulateBattleWithOptions(options = {}) {
     );
     const isPlayerWin = Math.random() < finalWinRate;
 
+    const advantageBreakdown = {
+        baseRate,
+        baseAdvantage: baseRate - 0.5,
+        matchupBonus: adjustedMatchupModifier,
+        skillBonus: skillWinRateBonus + skillBattleBonus,
+        skillWinRateBonus,
+        skillBattleBonus,
+        tacticBonus: tacticWinRateBonus,
+        pointWinRate: finalWinRate
+    };
+
     const battleLines = [
         ...generateModeStartLog(mode, enemy),
         ...(roundIndex !== null ? [`大会 第${roundIndex + 1}試合`] : []),
@@ -2752,6 +2803,7 @@ function simulateBattleWithOptions(options = {}) {
         playerPower,
         cpuPower,
         finalWinRate,
+        advantageBreakdown,
         isPlayerWin,
         battleLines,
         roundIndex,
@@ -3683,7 +3735,8 @@ function applyMatchResult(result) {
         rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null,
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
-        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null
+        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        advantageBreakdown: result.advantageBreakdown || null
     };
     changeScreen('battleResult');
 }
