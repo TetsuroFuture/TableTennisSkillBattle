@@ -143,11 +143,11 @@
         <main class="main-content">
             <!-- ナビゲーションバー -->
             <nav class="game-nav">
-                <button class="nav-btn active" data-screen="home">🏠 HOME</button>
-                <button class="nav-btn" data-screen="training">💪 育成</button>
-                <button class="nav-btn" data-screen="battleModeSelect">⚔️ 対戦</button>
-                <button class="nav-btn" data-screen="data">📊 データ</button>
-                <button class="nav-btn" data-screen="settings">⚙️ 設定</button>
+                <button class="nav-btn active" data-screen="home">HOME</button>
+                <button class="nav-btn" data-screen="training">育成</button>
+                <button class="nav-btn" data-screen="battleModeSelect">対戦</button>
+                <button class="nav-btn" data-screen="data">データ</button>
+                <button class="nav-btn" data-screen="settings">設定</button>
             </nav>
 
             <!-- ==============================
@@ -162,23 +162,27 @@
 
             <!-- HOME画面: メニュー -->
             <section class="home-menu-section">
-                <h2>🏓 メニュー</h2>
+                <h2>メニュー</h2>
                 <div class="home-menu-grid">
                     <button class="home-menu-card" data-screen="training">
-                        <span class="home-menu-icon">💪</span>
+                        <span class="menu-symbol menu-symbol-training"></span>
                         <span class="home-menu-label">育成</span>
+                        <span class="home-menu-sub">ステータスを強化</span>
                     </button>
                     <button class="home-menu-card" data-screen="battleModeSelect">
-                        <span class="home-menu-icon">⚔️</span>
+                        <span class="menu-symbol menu-symbol-battle"></span>
                         <span class="home-menu-label">対戦</span>
+                        <span class="home-menu-sub">Rate戦に挑む</span>
                     </button>
                     <button class="home-menu-card" data-screen="data">
-                        <span class="home-menu-icon">📊</span>
+                        <span class="menu-symbol menu-symbol-data"></span>
                         <span class="home-menu-label">データ</span>
+                        <span class="home-menu-sub">戦績を確認</span>
                     </button>
                     <button class="home-menu-card" data-screen="settings">
-                        <span class="home-menu-icon">⚙️</span>
+                        <span class="menu-symbol menu-symbol-settings"></span>
                         <span class="home-menu-label">設定</span>
+                        <span class="home-menu-sub">プロフィール管理</span>
                     </button>
                 </div>
             </section>
@@ -192,7 +196,7 @@
 
             <!-- プレイヤー情報セクション -->
             <section class="player-info training-player-section">
-                <h2>👤 選手情報</h2>
+                <h2>選手情報</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">選手名:</span>
@@ -273,7 +277,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-training -->
@@ -284,7 +288,7 @@
             <div id="screen-battleModeSelect" class="game-screen" style="display:none;">
 
             <section class="battle-mode-select-section">
-                <h2>⚔️ 対戦</h2>
+                <h2>対戦</h2>
                 <p class="battle-mode-select-sub">どの戦いに挑む？</p>
 
                 <div class="battle-mode-card-list">
@@ -311,7 +315,7 @@
                 </div>
 
                 <div class="settings-back-row">
-                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
                 </div>
             </section>
 
@@ -323,7 +327,7 @@
             <div id="screen-ratedBattleStart" class="game-screen" style="display:none;">
 
             <section class="rated-battle-start-section">
-                <h2>🌏 全国Rate対戦</h2>
+                <h2>全国Rate対戦</h2>
                 <p class="rated-battle-subtitle" id="ratedBattleSubtitle">今日の道場破り</p>
                 <p class="rated-battle-desc">育てた選手で、全国のライバルに挑戦しよう！</p>
 
@@ -365,9 +369,14 @@
                 <div class="rated-opponent-area" id="ratedOpponentArea" style="display:none;">
                     <div class="rated-opponent-found-label">対戦相手が見つかりました！</div>
                     <div class="rated-opponent-card">
-                        <div class="rated-opponent-name" id="ratedOpponentName">-</div>
-                        <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
-                        <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
+                        <div class="rated-opponent-header">
+                            <img id="ratedOpponentCharImg" class="style-mini-icon" src="" alt="">
+                            <div class="rated-opponent-header-info">
+                                <div class="rated-opponent-name" id="ratedOpponentName">-</div>
+                                <div class="rated-opponent-rate" id="ratedOpponentRate">-</div>
+                                <div class="rated-opponent-style" id="ratedOpponentStyle">-</div>
+                            </div>
+                        </div>
                         <div class="rated-rate-diff" id="ratedRateDiff">-</div>
                         <div class="rated-opponent-stats bs-stats-summary" id="ratedOpponentStats">-</div>
                         <div class="rated-opponent-skills-area">
@@ -407,7 +416,7 @@
 
             <section class="rated-anim-section">
                 <div class="rata-header">
-                    <h2>🌏 全国Rate対戦</h2>
+                    <h2>全国Rate対戦</h2>
                     <div class="rata-matchup-names">
                         <span class="rata-player-name" id="rataPlayerName">-</span>
                         <span class="rata-vs">vs</span>
@@ -468,12 +477,13 @@
             <div id="screen-battleStart" class="game-screen" style="display:none;">
 
             <section class="battle-start-section">
-                <h2>⚔️ 試合開始</h2>
+                <h2>試合開始</h2>
 
                 <div class="battle-start-matchup">
                     <!-- プレイヤー情報 -->
                     <div class="battle-start-card player-card">
-                        <h3>👤 あなた</h3>
+                        <h3>あなた</h3>
+                        <img id="bsPlayerCharImg" class="style-mini-icon battle-start-char-img" src="" alt="">
                         <div class="info-row">
                             <span class="label">選手名:</span>
                             <span class="value" id="bsPlayerName">-</span>
@@ -489,7 +499,8 @@
 
                     <!-- 対戦相手情報 -->
                     <div class="battle-start-card cpu-card">
-                        <h3>🤖 対戦相手</h3>
+                        <h3>対戦相手</h3>
+                        <img id="bsCpuCharImg" class="style-mini-icon battle-start-char-img" src="" alt="">
                         <div class="info-row">
                             <span class="label">選手名:</span>
                             <span class="value" id="bsCpuName">-</span>
@@ -620,7 +631,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-battle -->
@@ -631,7 +642,7 @@
             <div id="screen-battleResult" class="game-screen" style="display:none;">
 
             <section class="battle-result-section">
-                <h2>🏁 試合終了</h2>
+                <h2>試合終了</h2>
 
                 <!-- 対戦カード -->
                 <div class="br-info-card">
@@ -710,7 +721,7 @@
                 <!-- アクションボタン -->
                 <div class="br-buttons">
                     <button class="battle-btn" id="brPlayAgainBtn">🔄 もう一度試合する</button>
-                    <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                    <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
                 </div>
 
             </section>
@@ -724,7 +735,7 @@
 
             <!-- 全国Rate対決戦績セクション -->
             <section class="data-rated-section">
-                <h2>🌏 全国Rate対決戦績</h2>
+                <h2>全国Rate対決戦績</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">Rate:</span>
@@ -752,7 +763,7 @@
 
             <!-- CPU対戦戦績セクション -->
             <section class="data-records-section">
-                <h2>🤖 CPU対戦戦績</h2>
+                <h2>CPU対戦戦績</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">試合数:</span>
@@ -775,7 +786,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-data -->
@@ -787,7 +798,7 @@
 
             <!-- プレイヤー情報セクション -->
             <section class="player-info">
-                <h2>👤 プレイヤー情報</h2>
+                <h2>プレイヤー情報</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">選手名:</span>
@@ -802,7 +813,7 @@
 
             <!-- データ保存状況セクション -->
             <section class="settings-save-section">
-                <h2>💾 データ保存状況</h2>
+                <h2>データ保存状況</h2>
                 <div class="player-details">
                     <div class="info-row">
                         <span class="label">保存状態:</span>
@@ -811,14 +822,14 @@
                 </div>
                 <div class="save-actions">
                     <!--<button class="save-btn" id="manualSaveBtn">💾 手動保存</button>-->
-                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">🔑 パスワード変更</button>
-                    <button class="save-btn save-btn-danger" id="logoutBtn">🚪 ログアウト</button>
+                    <button class="save-btn save-btn-secondary" id="openChangePasswordBtn">パスワード変更</button>
+                    <button class="save-btn save-btn-danger" id="logoutBtn">ログアウト</button>
                 </div>
             </section>
 
             <!-- 操作ログセクション -->
             <section class="log-section">
-                <h2>📋 操作ログ</h2>
+                <h2>操作ログ</h2>
                 <div class="message-log" id="messageLog">
                     <div class="log-entry">ゲーム開始！戦型を選択して育成を開始してください。</div>
                 </div>
@@ -826,31 +837,31 @@
 
             <!-- 設定項目セクション -->
             <section class="settings-items-section">
-                <h2>🔧 設定項目</h2>
+                <h2>設定項目</h2>
                 <div class="settings-items-list">
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">✏️</span>
+                        <span class="settings-item-icon settings-icon-profile"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">プロフィール編集</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">📝</span>
+                        <span class="settings-item-icon settings-icon-name"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">選手名変更</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">🔑</span>
+                        <span class="settings-item-icon settings-icon-password"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">パスワード変更</span>
                             <span class="settings-item-status">今後実装予定</span>
                         </div>
                     </div>
                     <div class="settings-item-card settings-item-disabled">
-                        <span class="settings-item-icon">🗑️</span>
+                        <span class="settings-item-icon settings-icon-reset"></span>
                         <div class="settings-item-info">
                             <span class="settings-item-label">データリセット</span>
                             <span class="settings-item-status">今後実装予定</span>
@@ -861,7 +872,7 @@
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
-                <button class="nav-btn settings-back-btn" data-screen="home">🏠 HOMEへ戻る</button>
+                <button class="nav-btn settings-back-btn" data-screen="home">HOMEへ戻る</button>
             </div>
 
             </div><!-- /#screen-settings -->

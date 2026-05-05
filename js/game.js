@@ -643,11 +643,20 @@ function renderRatedOpponentPreview(opponent) {
     if (rateEl) {
         rateEl.textContent = `Rate ${opponentDisplayRate}`;
     }
+
+    let styleName = '不明';
     if (styleEl) {
-        const styleName = Number.isFinite(opponent.style) && styles[opponent.style]
+        styleName = Number.isFinite(opponent.style) && styles[opponent.style]
             ? styles[opponent.style].name
             : '不明';
         styleEl.textContent = `戦型: ${styleName}`;
+    }
+
+    // 相手戦型ミニ画像
+    const opponentCharImgEl = document.getElementById('ratedOpponentCharImg');
+    if (opponentCharImgEl) {
+        opponentCharImgEl.src = getStyleMiniImageSrc(opponent.style);
+        opponentCharImgEl.alt = styleName;
     }
 
     if (diffEl) {
@@ -856,6 +865,16 @@ function getStyleImageFolder(styleName) {
 function getRataCharacterImageSrc(styleName, state) {
     const folder = getStyleImageFolder(styleName);
     return `assets/images/style/${folder}/${state}.webp`;
+}
+
+/**
+ * 戦型インデックスからノーマル状態の画像パスを返す。
+ */
+function getStyleMiniImageSrc(styleId) {
+    const styleName = (Number.isFinite(styleId) && styles[styleId])
+        ? styles[styleId].name
+        : 'オールラウンド型';
+    return getRataCharacterImageSrc(styleName, 'normal');
 }
 
 function showRatedBattleAnimation(result) {
@@ -1142,11 +1161,25 @@ function renderBattleStartScreen() {
     playerStatsEl.textContent =
         `ATK: ${player.atk}  DEF: ${player.def}  SPD: ${player.spd}  TEC: ${player.tec}  STA: ${player.sta}`;
 
+    // プレイヤー戦型ミニ画像
+    const playerCharImgEl = document.getElementById('bsPlayerCharImg');
+    if (playerCharImgEl) {
+        playerCharImgEl.src = getStyleMiniImageSrc(player.style);
+        playerCharImgEl.alt = player.style !== null ? styles[player.style].name : '';
+    }
+
     battleStartCpu = createCpuOpponent();
     cpuNameEl.textContent = battleStartCpu.name;
     cpuStyleEl.textContent = styles[battleStartCpu.style].name;
     cpuStatsEl.textContent =
         `ATK: ${battleStartCpu.atk}  DEF: ${battleStartCpu.def}  SPD: ${battleStartCpu.spd}  TEC: ${battleStartCpu.tec}  STA: ${battleStartCpu.sta}`;
+
+    // CPU戦型ミニ画像
+    const cpuCharImgEl = document.getElementById('bsCpuCharImg');
+    if (cpuCharImgEl) {
+        cpuCharImgEl.src = getStyleMiniImageSrc(battleStartCpu.style);
+        cpuCharImgEl.alt = styles[battleStartCpu.style].name;
+    }
 
     // CPUの装備スキルを表示
     const cpuSkillsEl = document.getElementById('bsCpuSkills');
@@ -4175,7 +4208,10 @@ function renderSetupStyleList() {
                 <h4 class="setup-style-cat-label">${cat}</h4>
                 <div class="setup-style-buttons">
                     ${catStyles.map(style => `
-                        <button class="setup-style-btn" data-style="${style.id}">${style.name}</button>
+                        <button class="setup-style-btn" data-style="${style.id}">
+                            <img class="style-mini-icon" src="${getRataCharacterImageSrc(style.name, 'normal')}" alt="">
+                            <span class="style-btn-name">${style.name}</span>
+                        </button>
                     `).join('')}
                 </div>
             </div>

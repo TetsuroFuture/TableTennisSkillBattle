@@ -65,9 +65,13 @@ section {
 }
 
 section h2 {
-    font-size: 18px;
-    margin-bottom: 15px;
-    color: #333;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: #1f2937;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 8px;
+    margin-bottom: 14px;
     display: flex;
     align-items: center;
 }
@@ -1303,6 +1307,10 @@ section h3 {
 }
 
 .setup-style-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
     padding: 10px 8px;
     background: #f0f0f0;
     border: 2px solid #ddd;
@@ -1324,6 +1332,44 @@ section h3 {
     border-color: #4dabf7;
     color: white;
     box-shadow: 0 4px 10px rgba(77, 171, 247, 0.3);
+}
+
+/* 戦型ミニ画像 */
+.style-mini-icon {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.style-btn-name {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* 試合開始画面: カード内ミニ画像 */
+.battle-start-char-img {
+    display: block;
+    margin: 6px auto 8px;
+    width: 56px;
+    height: 56px;
+}
+
+/* 全国Rate対戦: 対戦相手カードヘッダー */
+.rated-opponent-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.rated-opponent-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .setup-selected-info {
@@ -1586,24 +1632,25 @@ section h3 {
 /* ゲームナビゲーションバー */
 .game-nav {
     display: flex;
-    gap: 4px;
-    padding: 8px 10px;
-    background: #f8f9fa;
-    border-bottom: 2px solid #e9ecef;
+    gap: 6px;
+    padding: 8px;
+    background: #0b1220;
+    border-bottom: none;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
 
 .nav-btn {
     flex: 1;
-    min-width: 56px;
-    padding: 8px 4px;
+    min-width: 52px;
+    padding: 9px 8px;
     border: none;
-    border-radius: 8px;
-    background: #e9ecef;
-    color: #555;
-    font-size: 11px;
-    font-weight: 700;
+    border-radius: 999px;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
     cursor: pointer;
     transition: background 0.2s ease, color 0.2s ease;
     white-space: nowrap;
@@ -1611,14 +1658,14 @@ section h3 {
 }
 
 .nav-btn:hover {
-    background: #dee2e6;
-    color: #333;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e7eb;
 }
 
 .nav-btn.active {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #f97316;
     color: white;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.28);
 }
 
 /* ゲーム画面（各screen-*の共通ルール） */
@@ -1652,16 +1699,18 @@ section h3 {
 .home-menu-card {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 20px 10px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 16px;
+    min-height: 118px;
     background: white;
     border: 2px solid #e9ecef;
-    border-radius: 12px;
+    border-radius: 14px;
     cursor: pointer;
     transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
     font-family: inherit;
+    text-align: left;
 }
 
 .home-menu-card:hover {
@@ -1670,15 +1719,72 @@ section h3 {
     transform: translateY(-2px);
 }
 
-.home-menu-icon {
-    font-size: 28px;
-    line-height: 1;
+/* CSSアイコン: メニューシンボル */
+.menu-symbol {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    display: inline-block;
+    position: relative;
+    margin-bottom: 10px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.16);
+    flex-shrink: 0;
+}
+
+.menu-symbol::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.menu-symbol-training {
+    background: linear-gradient(135deg, #ff8a3d, #ff4d4d);
+}
+
+.menu-symbol-training::after {
+    content: "UP";
+}
+
+.menu-symbol-battle {
+    background: linear-gradient(135deg, #ef4444, #991b1b);
+}
+
+.menu-symbol-battle::after {
+    content: "VS";
+}
+
+.menu-symbol-data {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+}
+
+.menu-symbol-data::after {
+    content: "RT";
+}
+
+.menu-symbol-settings {
+    background: linear-gradient(135deg, #64748b, #334155);
+}
+
+.menu-symbol-settings::after {
+    content: "SET";
 }
 
 .home-menu-label {
-    font-size: 13px;
-    font-weight: 700;
-    color: #444;
+    font-size: 15px;
+    font-weight: 900;
+    color: #111827;
+}
+
+.home-menu-sub {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    margin-top: 2px;
 }
 
 /* 対戦モード選択画面 */
@@ -1980,8 +2086,73 @@ section h3 {
 }
 
 .settings-item-icon {
-    font-size: 22px;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
     flex-shrink: 0;
+    background: #eef2ff;
+    position: relative;
+    font-size: 0;
+}
+
+.settings-icon-profile {
+    background: #eef2ff;
+}
+
+.settings-icon-profile::after {
+    content: "PRF";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 8px;
+    font-weight: 900;
+    color: #4f46e5;
+}
+
+.settings-icon-name {
+    background: #f0fdf4;
+}
+
+.settings-icon-name::after {
+    content: "NM";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 900;
+    color: #16a34a;
+}
+
+.settings-icon-password {
+    background: #eef2ff;
+}
+
+.settings-icon-password::after {
+    content: "KEY";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 900;
+    color: #4f46e5;
+}
+
+.settings-icon-reset {
+    background: #fff1f2;
+}
+
+.settings-icon-reset::after {
+    content: "DEL";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 9px;
+    font-weight: 900;
+    color: #e11d48;
 }
 
 .settings-item-info {
