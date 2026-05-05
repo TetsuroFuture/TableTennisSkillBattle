@@ -277,8 +277,8 @@ function setupBattleModeSelectButtons() {
 // 全国Rate対戦開始画面
 // ============================================================
 
-const RATED_PROVISIONAL_THRESHOLD = 50;
-const MAX_PROVISIONAL_PENALTY = 500;
+const RATED_PROVISIONAL_THRESHOLD = 20;
+const MAX_PROVISIONAL_PENALTY = 300;
 const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
 const MAX_OPPONENT_FETCH_SIZE = 50;
