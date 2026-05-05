@@ -2498,10 +2498,46 @@ function generateSkillBattleLogs(targetPlayer, context = {}) {
 }
 
 function calculateBattleSkillBonus(targetPlayer, context = {}) {
-    // Phase7(先行)では未実装: バトルイベント補正はまだ適用しない
-    void targetPlayer;
-    void context;
-    return 0;
+    const equippedSkills = getEquippedSkillObjects(targetPlayer);
+    let bonus = 0;
+
+    equippedSkills.forEach(skill => {
+        const effects = skill.effects || {};
+
+        if (effects.finishRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.attackChainRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.counterRate) {
+            bonus += 0.04;
+        }
+
+        if (effects.counterEventRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.enemyMistakeRate) {
+            bonus += 0.03;
+        }
+
+        if (context.isDisadvantage && effects.comebackEventRate) {
+            bonus += 0.05;
+        }
+
+        if (effects.randomRangeRate) {
+            bonus += 0.02;
+        }
+
+        if (effects.enemyFinishRate) {
+            bonus += 0.03;
+        }
+    });
+
+    return clamp(bonus, -0.08, 0.10);
 }
 
 function applyEnemyDebuffFromSkills(owner, enemyEffective, activationContext) {
