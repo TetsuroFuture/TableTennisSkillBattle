@@ -1178,7 +1178,9 @@ function renderBattleStartScreen() {
     const cpuCharImgEl = document.getElementById('bsCpuCharImg');
     if (cpuCharImgEl) {
         cpuCharImgEl.src = getStyleMiniImageSrc(battleStartCpu.style);
-        cpuCharImgEl.alt = styles[battleStartCpu.style].name;
+        cpuCharImgEl.alt = (battleStartCpu.style != null && styles[battleStartCpu.style])
+            ? styles[battleStartCpu.style].name
+            : '';
     }
 
     // CPUの装備スキルを表示
