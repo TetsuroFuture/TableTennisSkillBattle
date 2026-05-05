@@ -293,8 +293,8 @@ function setupBattleModeSelectButtons() {
 // 全国Rate対戦開始画面
 // ============================================================
 
-const RATED_PROVISIONAL_THRESHOLD = 50;
-const MAX_PROVISIONAL_PENALTY = 500;
+const RATED_PROVISIONAL_THRESHOLD = 20;
+const MAX_PROVISIONAL_PENALTY = 300;
 const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
 const MAX_OPPONENT_FETCH_SIZE = 50;
@@ -428,6 +428,8 @@ function renderRatedBattleSummary(targetPlayer) {
             provisionalEl.style.display = 'none';
         }
     }
+
+    renderLevelEquipSlotInfo('rated', targetPlayer);
 }
 
 async function renderRecentRatedBattleList(playerId) {
@@ -1182,6 +1184,7 @@ function renderBattleStartScreen() {
     // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
     player.equippedSkills = [];
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
+    renderLevelEquipSlotInfo('bs', player);
 }
 
 // ============================================================
@@ -1256,6 +1259,38 @@ function renderBattleResultScreen() {
         logEl.innerHTML = r.battleLines
             .map(line => `<div class="battle-log-entry">${line}</div>`)
             .join('');
+    }
+
+    renderBattleResultLevelUpInfo(r);
+}
+
+function renderBattleResultLevelUpInfo(result) {
+    const card = document.getElementById('brLevelUpCard');
+    const levelText = document.getElementById('brLevelUpText');
+    const slotText = document.getElementById('brEquipSlotUpText');
+
+    if (!card || !levelText || !slotText) {
+        return;
+    }
+
+    const info = result.levelUpInfo;
+
+    if (!info || !info.didLevelUp) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    levelText.textContent = `Lv ${info.levelBefore} → Lv ${info.levelAfter}`;
+
+    if (info.didEquipSlotIncrease) {
+        slotText.textContent =
+            `スキル装備枠が増えました！ ${info.slotsBefore}枠 → ${info.slotsAfter}枠`;
+    } else {
+        const nextInfo = getNextEquipSlotUnlockInfo(info.levelAfter);
+        slotText.textContent = nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です';
     }
 }
 
@@ -1462,6 +1497,8 @@ function applyPlayerDataToRuntime(data) {
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
+    // プレリリース版では全スキル解放のため、ロード後に全スキルを付与する。
+    unlockAllSkills(player);
     // ロード直後は「保存済み」と見なしてスナップショットを記録する
     lastSavedPlayerData = clonePlayerSnapshot(player);
 }
@@ -2168,8 +2205,8 @@ function getEquippedSkillObjects(targetPlayer) {
     ensurePlayerEquippedSkills(targetPlayer);
     cleanupEquippedSkills(targetPlayer);
 
+    // プレリリース版では全スキル解放のため、skills 配列によるフィルタは行わない。
     return targetPlayer.equippedSkills
-        .filter(skillId => targetPlayer.skills.includes(skillId))
         .map(skillId => getSkillById(skillId))
         .filter(skill => skill !== null);
 }
@@ -2187,6 +2224,40 @@ function getMaxEquipSlots(level) {
     return 2;
 }
 
+function getNextEquipSlotUnlockInfo(level) {
+    if (level < 5) {
+        return { nextLevel: 5, nextSlots: 3 };
+    }
+    if (level < 10) {
+        return { nextLevel: 10, nextSlots: 4 };
+    }
+    if (level < 20) {
+        return { nextLevel: 20, nextSlots: 5 };
+    }
+    return null;
+}
+
+function getLevelEquipSlotSummary(targetPlayer) {
+    const level = Number.isFinite(targetPlayer.level) ? targetPlayer.level : 1;
+    const currentSlots = getMaxEquipSlots(level);
+    const nextInfo = getNextEquipSlotUnlockInfo(level);
+
+    return {
+        level,
+        currentSlots,
+        nextInfo,
+        mainText: `Lv ${level}　装備枠 ${currentSlots}`,
+        nextText: nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です'
+    };
+}
+
+function getEquippedSkillCount(targetPlayer) {
+    ensurePlayerEquippedSkills(targetPlayer);
+    return targetPlayer.equippedSkills.length;
+}
+
 function ensurePlayerSkills(targetPlayer) {
     if (!Array.isArray(targetPlayer.skills)) {
         targetPlayer.skills = [];
@@ -2194,8 +2265,22 @@ function ensurePlayerSkills(targetPlayer) {
 }
 
 function hasSkill(targetPlayer, skillId) {
+    // プレリリース版では全スキル解放のため、スキルが存在するIDであれば所持扱いとする。
+    // targetPlayer は将来の収集要素復活に備えて引数として残す（後方互換性）。
+    return Boolean(getSkillById(skillId));
+}
+
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
+function unlockAllSkills(targetPlayer) {
     ensurePlayerSkills(targetPlayer);
-    return targetPlayer.skills.includes(skillId);
+    const ownedSet = new Set(targetPlayer.skills);
+    for (const skill of skillCards) {
+        if (!ownedSet.has(skill.id)) {
+            targetPlayer.skills.push(skill.id);
+            ownedSet.add(skill.id);
+        }
+    }
 }
 
 function addSkillToPlayer(targetPlayer, skillId) {
@@ -2231,10 +2316,7 @@ function equipSkill(targetPlayer, skillId) {
         return false;
     }
 
-    if (!hasSkill(targetPlayer, skillId)) {
-        addLog(`未所持のスキル「${skill.name}」は装備できません。`, 'warning');
-        return false;
-    }
+    // プレリリース版では全スキル解放のため、所持チェックは省略。
 
     if (isSkillEquipped(targetPlayer, skillId)) {
         addLog(`スキル「${skill.name}」はすでに装備中です。`, 'info');
@@ -2308,6 +2390,8 @@ function isSkillEquipped(targetPlayer, skillId) {
     return targetPlayer.equippedSkills.includes(skillId);
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function gainRandomSkill(targetPlayer) {
     const unownedSkills = getUnownedSkills(targetPlayer);
 
@@ -2854,6 +2938,27 @@ function updateStyleInfo() {
 }
 
 function renderHomeScreen() {
+    renderLevelEquipSlotInfo('home', player);
+}
+
+function renderLevelEquipSlotInfo(prefix, targetPlayer) {
+    const summary = getLevelEquipSlotSummary(targetPlayer);
+    const equippedCount = getEquippedSkillCount(targetPlayer);
+
+    const levelEl = document.getElementById(`${prefix}PlayerLevel`);
+    if (levelEl) {
+        levelEl.textContent = `Lv ${summary.level}`;
+    }
+
+    const slotsEl = document.getElementById(`${prefix}EquipSlots`);
+    if (slotsEl) {
+        slotsEl.textContent = `${equippedCount} / ${summary.currentSlots}`;
+    }
+
+    const nextEl = document.getElementById(`${prefix}NextEquipSlot`);
+    if (nextEl) {
+        nextEl.textContent = summary.nextText;
+    }
 }
 
 function renderUnifiedSkillList() {
@@ -2862,21 +2967,9 @@ function renderUnifiedSkillList() {
         return;
     }
 
+    // プレリリース版では全スキル解放のため、未取得表示は行わない。
     const itemsHtml = skillCards.map(skill => {
-        const owned = hasSkill(player, skill.id);
         const equipped = isSkillEquipped(player, skill.id);
-
-        if (!owned) {
-            return `
-                <div class="skill-card skill-unacquired">
-                    <div class="skill-title-row">
-                        <span class="skill-name">???</span>
-                        <span class="skill-category">???</span>
-                    </div>
-                    <div class="skill-description">???</div>
-                </div>
-            `;
-        }
 
         return `
             <div class="skill-card ${equipped ? 'equipped' : ''}">
@@ -2908,11 +3001,8 @@ function renderPreBattleSkillList(containerId, infoId) {
         infoElement.textContent = `装備中 ${equippedCount} / ${maxSlots}`;
     }
 
-    const ownedSkills = getOwnedSkills(player);
-    if (ownedSkills.length === 0) {
-        container.innerHTML = '<div class="skill-empty">スキルカードを持っていません</div>';
-        return;
-    }
+    // プレリリース版では全スキル解放のため、全スキルカードから選択できる。
+    const availableSkills = skillCards;
 
     const isFulfilled = equippedCount >= maxSlots;
     const promptHtml = `<div class="pre-battle-skill-prompt${isFulfilled ? ' fulfilled' : ''}">
@@ -2921,7 +3011,7 @@ function renderPreBattleSkillList(containerId, infoId) {
             : `⚠️ スキルカードを選択してください（${equippedCount} / ${maxSlots}）`}
     </div>`;
 
-    const chipsHtml = ownedSkills.map(skill => {
+    const chipsHtml = availableSkills.map(skill => {
         const equipped = isSkillEquipped(player, skill.id);
         const canSelect = !equipped && equippedCount < maxSlots;
         const shouldDisable = !equipped && !canSelect;
@@ -3180,11 +3270,10 @@ function renderTrainingScreen() {
     renderStatRows('trainingStatList', player);
     renderTrainingCompleteCard();
 
-    const buyBtn = document.getElementById('buyRandomSkillBtn');
-    if (buyBtn) {
-        const allSkillsOwned = getUnownedSkills(player).length === 0;
-        buyBtn.disabled = player.usableExp < 100 || allSkillsOwned;
-    }
+    // プレリリース版ではランダムスキル獲得ボタンはHTMLで非表示。
+    // ボタンが存在しても何もしない。
+
+    renderLevelEquipSlotInfo('training', player);
 }
 
 function renderDataScreen() {
@@ -3634,7 +3723,14 @@ function applyMatchResult(result) {
         player.losses += 1;
     }
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     awardExp(expGained);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     updateBattleResultView(result.cpu, result.playerPower, result.cpuPower, result.finalWinRate, result.isPlayerWin);
     renderBattleLog(result.battleLines);
     renderCharacters(result.cpu);
@@ -3690,7 +3786,15 @@ function applyMatchResult(result) {
         rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null,
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
-        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null
+        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3737,6 +3841,9 @@ function startTournament() {
     let wins = 0;
     let lastResult = null;
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     for (let round = 1; round <= 3; round += 1) {
         const roundResult = simulateBattleWithOptions({
             mode: 'tournament',
@@ -3769,6 +3876,10 @@ function startTournament() {
     }
 
     awardExp(totalExp);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     renderBattleLog(tournamentLogs);
     updateBattleResultView(lastResult.cpu, lastResult.playerPower, lastResult.cpuPower, lastResult.finalWinRate, lastResult.isPlayerWin);
     const tournamentResult = wins === 3 ? 'win' : 'lose';
@@ -3813,7 +3924,15 @@ function startTournament() {
         playerLevel: player.level,
         playerExp: player.exp,
         playerWins: player.wins,
-        playerLosses: player.losses
+        playerLosses: player.losses,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3905,6 +4024,8 @@ function setupSkillAcquisitionButton() {
     });
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function spendExpForRandomSkill() {
     const expCost = 100;
     const expReturn = 50;
