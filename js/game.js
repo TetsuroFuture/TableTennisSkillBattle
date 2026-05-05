@@ -4203,7 +4203,7 @@ function renderStatRows(containerId, targetPlayer) {
     ];
     container.innerHTML = stats.map(({ key, code }) => {
         const cap = getStatCap(targetPlayer.style, key);
-        const displayVal = Math.min(targetPlayer[key], cap);
+        const displayVal = getDisplayStatValue(targetPlayer, key);
         const percent = Math.min(100, (displayVal / cap * 100));
         const traitLabel = getStatTraitLabel(cap);
         const traitClass = getStatTraitClass(cap);
