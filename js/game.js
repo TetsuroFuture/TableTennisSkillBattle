@@ -363,6 +363,11 @@ function showRatedBattleStartScreen() {
         playerSkillArea.style.display = 'none';
     }
 
+    const tacticArea = document.getElementById('ratedTacticArea');
+    if (tacticArea) {
+        tacticArea.style.display = 'none';
+    }
+
     const findBtn = document.getElementById('findRatedOpponentBtn');
     const startBtn = document.getElementById('startRatedBattleBtn');
     if (findBtn) {
@@ -451,11 +456,11 @@ async function renderRecentRatedBattleList(playerId) {
     }
 
     try {
+        // 複合インデックス未作成でも動くように、Firestore側の orderBy は使わず、
+        // playerId + mode で取得した後に JS 側で createdAt 降順へ並び替える。
         const snapshot = await db.collection('matches')
             .where('playerId', '==', playerId)
             .where('mode', '==', 'rated')
-            .orderBy('createdAt', 'desc')
-            .limit(5)
             .get();
 
         if (snapshot.empty) {
@@ -469,11 +474,34 @@ async function renderRecentRatedBattleList(playerId) {
             return;
         }
 
+        const toMillis = (value) => {
+            if (!value) {
+                return 0;
+            }
+            if (typeof value.toMillis === 'function') {
+                return value.toMillis();
+            }
+            if (value instanceof Date) {
+                return value.getTime();
+            }
+            if (typeof value === 'number') {
+                return value;
+            }
+            return 0;
+        };
+
+        const recentMatches = [];
+        snapshot.forEach(doc => {
+            recentMatches.push(doc.data());
+        });
+
+        const latestFiveMatches = recentMatches
+            .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+            .slice(0, 5);
+
         let recentWins = 0;
         let recentLosses = 0;
-        const items = [];
-        snapshot.forEach(doc => {
-            const d = doc.data();
+        const items = latestFiveMatches.map(d => {
             const isWin = d.result === 'win';
             if (isWin) {
                 recentWins += 1;
@@ -486,7 +514,7 @@ async function renderRecentRatedBattleList(playerId) {
                 ? (rateChangeVal >= 0 ? ` +${rateChangeVal}` : ` ${rateChangeVal}`)
                 : '';
             const opponentName = d.enemyName || '不明';
-            items.push(`<div class="rated-history-item ${isWin ? 'win' : 'lose'}">${marker} vs ${opponentName}${rateChangeText}</div>`);
+            return `<div class="rated-history-item ${isWin ? 'win' : 'lose'}">${marker} vs ${opponentName}${rateChangeText}</div>`;
         });
 
         recentRatedWins = recentWins;
@@ -723,12 +751,19 @@ function renderRatedOpponentPreview(opponent) {
         }
     }
 
-    // プレイヤーのスキルカード選択エリアを表示（現在の装備状態を維持）
+    // 試合前作戦・プレイヤーのスキルカード選択エリアを表示（現在の装備状態を維持）
+    const tacticArea = document.getElementById('ratedTacticArea');
+    if (tacticArea) {
+        tacticArea.style.display = '';
+    }
+
     const playerSkillArea = document.getElementById('ratedPlayerSkillArea');
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
+
     cleanupEquippedSkills(player);
+    renderTactics();
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
 
@@ -1241,8 +1276,9 @@ function renderBattleStartScreen() {
         }
     }
 
-    // プレイヤーのスキルカード選択を表示（現在の装備状態を維持）
+    // プレイヤーの作戦・スキルカード選択を表示（現在の装備状態を維持）
     cleanupEquippedSkills(player);
+    renderTactics();
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
     renderLevelEquipSlotInfo('bs', player);
 }
@@ -2973,31 +3009,48 @@ function simulateBattleWithOptions(options = {}) {
     const debuffedCpu = applySkillDebuffsToEnemy(enemy, player);
 
     const skillEffectivePlayer = applySkillStatusBonus(player);
-    const effectivePlayer = applyTacticStatusBonus(skillEffectivePlayer, tacticId);
     const effectiveCpu = applySkillStatusBonus(debuffedCpu);
 
-    const playerPower = calculatePower(effectivePlayer);
+    // 作戦適用前の勝率を「基本戦力差 + 戦型相性 + スキル効果」の基準にする。
+    // ここから作戦適用後との差分を出すことで、SPD/TEC/STA/ATK 補正型の作戦も
+    // 優勢度内訳の「作戦効果」に表示できるようにする。
+    const playerPowerBeforeTactic = calculatePower(skillEffectivePlayer);
     const cpuPower = calculatePower(effectiveCpu);
-    const baseRate = playerPower / (playerPower + cpuPower);
+    const baseRateBeforeTactic = playerPowerBeforeTactic / (playerPowerBeforeTactic + cpuPower);
+
+    const effectivePlayer = applyTacticStatusBonus(skillEffectivePlayer, tacticId);
+    const playerPower = calculatePower(effectivePlayer);
+    const baseRateAfterTactic = playerPower / (playerPower + cpuPower);
+
+    const tacticStatusBonus = baseRateAfterTactic - baseRateBeforeTactic;
+    const tacticMatchupBonus = adjustedMatchupModifier - skillAdjustedMatchup;
+    const tacticDirectBonus = calculateTacticWinRateBonus(tacticId);
+    const tacticTotalBonus = tacticStatusBonus + tacticMatchupBonus + tacticDirectBonus;
 
     const skillWinRateBonus = calculateSkillWinRateBonus(player, debuffedCpu, context);
     const skillBattleBonus = calculateBattleSkillBonus(player, context);
-    const tacticWinRateBonus = calculateTacticWinRateBonus(tacticId);
 
     const finalWinRate = clampWinRate(
-        baseRate + adjustedMatchupModifier + skillWinRateBonus + skillBattleBonus + tacticWinRateBonus
+        baseRateBeforeTactic +
+        skillAdjustedMatchup +
+        skillWinRateBonus +
+        skillBattleBonus +
+        tacticTotalBonus
     );
     const pointMatch = simulatePointMatch(finalWinRate);
     const isPlayerWin = pointMatch.isPlayerWin;
 
     const advantageBreakdown = {
-        baseRate,
-        baseAdvantage: baseRate - 0.5,
-        matchupBonus: adjustedMatchupModifier,
+        baseRate: baseRateBeforeTactic,
+        baseAdvantage: baseRateBeforeTactic - 0.5,
+        matchupBonus: skillAdjustedMatchup,
         skillBonus: skillWinRateBonus + skillBattleBonus,
         skillWinRateBonus,
         skillBattleBonus,
-        tacticBonus: tacticWinRateBonus,
+        tacticBonus: tacticTotalBonus,
+        tacticStatusBonus,
+        tacticMatchupBonus,
+        tacticDirectBonus,
         pointWinRate: finalWinRate
     };
 
@@ -3018,7 +3071,11 @@ function simulateBattleWithOptions(options = {}) {
         adjustedMatchupModifier,
         skillWinRateBonus,
         skillBattleBonus,
-        tacticWinRateBonus,
+        tacticWinRateBonus: tacticDirectBonus,
+        tacticStatusBonus,
+        tacticMatchupBonus,
+        tacticDirectBonus,
+        tacticTotalBonus,
         playerPower,
         cpuPower,
         finalWinRate,
@@ -3906,22 +3963,29 @@ function updateCurrentModeLabel(mode) {
 }
 
 function renderTactics() {
-    const select = document.getElementById('tacticSelect');
-    const description = document.getElementById('tacticDescription');
+    const selects = document.querySelectorAll('#tacticSelect, .tactic-select');
+    const descriptions = document.querySelectorAll('#tacticDescription, .tactic-description');
 
-    if (!select) {
+    if (selects.length === 0) {
         return;
     }
 
-    select.innerHTML = tactics.map(tactic => {
+    const optionsHtml = tactics.map(tactic => {
         const selected = tactic.id === selectedTacticId ? 'selected' : '';
         return `<option value="${tactic.id}" ${selected}>${tactic.name}</option>`;
     }).join('');
 
+    selects.forEach(select => {
+        select.innerHTML = optionsHtml;
+        select.value = selectedTacticId;
+    });
+
     const currentTactic = getTacticById(selectedTacticId);
-    if (description && currentTactic) {
-        description.textContent = currentTactic.description;
-    }
+    descriptions.forEach(description => {
+        if (currentTactic) {
+            description.textContent = currentTactic.description;
+        }
+    });
 }
 
 function renderRivals() {
@@ -4579,18 +4643,20 @@ function setupShareButtons() {
 }
 
 function setupTacticSelect() {
-    const tacticSelect = document.getElementById('tacticSelect');
-    if (!tacticSelect) {
+    const tacticSelects = document.querySelectorAll('#tacticSelect, .tactic-select');
+    if (tacticSelects.length === 0) {
         return;
     }
 
-    tacticSelect.addEventListener('change', function(event) {
-        selectedTacticId = event.target.value;
-        renderTactics();
-        const selected = getTacticById(selectedTacticId);
-        if (selected) {
-            addLog(`作戦を「${selected.name}」に変更しました。`, 'info');
-        }
+    tacticSelects.forEach(select => {
+        select.addEventListener('change', function(event) {
+            selectedTacticId = event.target.value;
+            renderTactics();
+            const selected = getTacticById(selectedTacticId);
+            if (selected) {
+                addLog(`作戦を「${selected.name}」に変更しました。`, 'info');
+            }
+        });
     });
 }
 

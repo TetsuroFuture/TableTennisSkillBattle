@@ -546,7 +546,8 @@ section h3 {
     margin-bottom: 8px;
 }
 
-#tacticSelect {
+#tacticSelect,
+.tactic-select {
     width: 100%;
     border: 1px solid #ced4da;
     border-radius: 5px;
@@ -556,9 +557,14 @@ section h3 {
     background: #fff;
 }
 
-#tacticDescription {
+#tacticDescription,
+.tactic-description {
     font-size: 12px;
     color: #495057;
+}
+
+.pre-battle-tactic-box {
+    margin-bottom: 12px;
 }
 
 .rival-box {
