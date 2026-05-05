@@ -1921,6 +1921,94 @@ section h3 {
     margin-top: 4px;
 }
 
+/* レベルアップカード */
+.br-levelup-card {
+    background: linear-gradient(135deg, #fff9db, #fff3bf);
+    border: 2px solid #ffd43b;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.br-levelup-card h3 {
+    font-size: 18px;
+    color: #e67700;
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+}
+
+.br-levelup-card p {
+    font-size: 14px;
+    color: #343a40;
+    font-weight: 700;
+    line-height: 1.6;
+    margin: 4px 0;
+}
+
+/* 次の装備枠解放テキスト（複数箇所で使用） */
+.equip-slot-next {
+    font-size: 12px;
+    color: #868e96;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 4px;
+}
+
+/* HOME画面: プレイヤー状態表示 */
+.home-player-status {
+    text-align: center;
+    padding: 10px 16px 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #343a40;
+}
+
+.home-player-level {
+    font-size: 16px;
+    color: #1971c2;
+}
+
+.home-player-status-sep {
+    color: #868e96;
+}
+
+.home-player-slots {
+    font-size: 16px;
+    color: #2f9e44;
+}
+
+.home-next-equip-slot {
+    font-size: 12px;
+    color: #868e96;
+    margin-top: 4px;
+}
+
+/* Rate対戦開始画面: レベル情報 */
+.rated-level-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+}
+
+.rated-level-info-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.rated-level-label {
+    color: #868e96;
+}
+
+.rated-level-value {
+    font-weight: 700;
+    color: #343a40;
+}
+
 /* プレースホルダー画面 */
 .screen-placeholder-section {
     border-left-color: #adb5bd;
