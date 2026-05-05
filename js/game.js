@@ -893,6 +893,9 @@ function getStyleMiniImageSrc(styleId) {
         ? styles[styleId].name
         : 'オールラウンド型';
     return getRataCharacterImageSrc(styleName, 'normal');
+}
+
+/**
  * キャラクター画像の状態を切り替える共通関数。
  * @param {HTMLImageElement} imgEl - 対象の img 要素
  * @param {string} state - 切り替え先の状態（normal/score/conceded/win/lose）

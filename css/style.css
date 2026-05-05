@@ -2052,6 +2052,8 @@ section h3 {
 
 .share-x-btn:active {
     transform: scale(0.98);
+}
+
 .br-analysis-card {
     background: white;
     border: 1px solid #e9ecef;
