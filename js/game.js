@@ -1228,6 +1228,16 @@ function renderBattleResultScreen() {
     setEl('brPlayerExp', `${r.playerExp} EXP`);
     setEl('brRecord', `${r.playerWins}勝 ${r.playerLosses}敗`);
 
+    const finalScoreRow = document.getElementById('brFinalScoreRow');
+    if (finalScoreRow) {
+        if (Number.isFinite(r.playerScore) && Number.isFinite(r.enemyScore)) {
+            setEl('brFinalScore', `${r.playerScore} - ${r.enemyScore}`);
+            finalScoreRow.style.display = '';
+        } else {
+            finalScoreRow.style.display = 'none';
+        }
+    }
+
     const rateChangeRow = document.getElementById('brRateChangeRow');
     if (rateChangeRow) {
         if (r.mode === 'rated' && r.rateChange !== null) {
@@ -2878,7 +2888,8 @@ function simulateBattleWithOptions(options = {}) {
     const finalWinRate = clampWinRate(
         baseRate + adjustedMatchupModifier + skillWinRateBonus + skillBattleBonus + tacticWinRateBonus
     );
-    const isPlayerWin = Math.random() < finalWinRate;
+    const pointMatch = simulatePointMatch(finalWinRate);
+    const isPlayerWin = pointMatch.isPlayerWin;
 
     const battleLines = [
         ...generateModeStartLog(mode, enemy),
@@ -2901,6 +2912,9 @@ function simulateBattleWithOptions(options = {}) {
         playerPower,
         cpuPower,
         finalWinRate,
+        pointMatch,
+        playerScore: pointMatch.playerScore,
+        enemyScore: pointMatch.enemyScore,
         isPlayerWin,
         battleLines,
         roundIndex,
@@ -3675,6 +3689,60 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
     return { lines, playerScore, cpuScore };
 }
 
+/**
+ * 1点ごとの得点確率を使って11点先取・デュースありの試合をシミュレートする。
+ * @param {number} pointWinRate - プレイヤーが1点を取る確率（0〜1）
+ * @param {object} [options]
+ * @param {number} [options.targetScore=11] - 先取点数
+ * @param {number} [options.requiredDiff=2] - 勝利に必要な点差
+ * @param {number} [options.maxScore=30] - 極端な長期デュース防止のための最大スコア上限
+ * @returns {{isPlayerWin: boolean, playerScore: number, enemyScore: number, pointResults: Array}}
+ */
+function simulatePointMatch(pointWinRate, options = {}) {
+    const targetScore = options.targetScore || 11;
+    const requiredDiff = options.requiredDiff || 2;
+    const maxScore = options.maxScore || 30;
+
+    let playerScore = 0;
+    let enemyScore = 0;
+    const pointResults = [];
+
+    while (true) {
+        const isPlayerPoint = Math.random() < pointWinRate;
+
+        if (isPlayerPoint) {
+            playerScore += 1;
+        } else {
+            enemyScore += 1;
+        }
+
+        pointResults.push({
+            playerScore,
+            enemyScore,
+            winner: isPlayerPoint ? 'player' : 'enemy'
+        });
+
+        const reachedTarget = playerScore >= targetScore || enemyScore >= targetScore;
+        const scoreDiff = Math.abs(playerScore - enemyScore);
+
+        if (reachedTarget && scoreDiff >= requiredDiff) {
+            break;
+        }
+
+        // 極端な長期デュース防止
+        if (playerScore >= maxScore || enemyScore >= maxScore) {
+            break;
+        }
+    }
+
+    return {
+        isPlayerWin: playerScore > enemyScore,
+        playerScore,
+        enemyScore,
+        pointResults
+    };
+}
+
 function buildBattleLogLines(isPlayerWin, playerStyleId, cpuStyleId, skillLogLines, playerName, cpuName) {
     const playerStyleName = styles[playerStyleId].name;
     const cpuStyleName = styles[cpuStyleId].name;
@@ -3904,6 +3972,8 @@ function applyMatchResult(result) {
         cpuStyle: styles[result.cpu.style].name,
         playerPower: result.playerPower,
         cpuPower: result.cpuPower,
+        playerScore: Number.isFinite(result.playerScore) ? result.playerScore : null,
+        enemyScore: Number.isFinite(result.enemyScore) ? result.enemyScore : null,
         expGained,
         battleLines: result.battleLines,
         playerLevel: player.level,
