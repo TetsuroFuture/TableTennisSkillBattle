@@ -1921,6 +1921,45 @@ section h3 {
     margin-top: 4px;
 }
 
+.br-analysis-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.br-analysis-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #343a40;
+}
+
+.br-analysis-item {
+    margin-bottom: 10px;
+}
+
+.br-analysis-item:last-child {
+    margin-bottom: 0;
+}
+
+.br-analysis-label {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.br-analysis-item p {
+    font-size: 13px;
+    color: #495057;
+    line-height: 1.6;
+    margin: 0;
+}
+
 .br-advantage-card {
     background: white;
     border: 1px solid #e9ecef;
@@ -1981,6 +2020,94 @@ section h3 {
     font-size: 11px;
     color: #868e96;
     line-height: 1.5;
+}
+
+/* レベルアップカード */
+.br-levelup-card {
+    background: linear-gradient(135deg, #fff9db, #fff3bf);
+    border: 2px solid #ffd43b;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.br-levelup-card h3 {
+    font-size: 18px;
+    color: #e67700;
+    margin-bottom: 8px;
+    letter-spacing: 0.08em;
+}
+
+.br-levelup-card p {
+    font-size: 14px;
+    color: #343a40;
+    font-weight: 700;
+    line-height: 1.6;
+    margin: 4px 0;
+}
+
+/* 次の装備枠解放テキスト（複数箇所で使用） */
+.equip-slot-next {
+    font-size: 12px;
+    color: #868e96;
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-top: 4px;
+}
+
+/* HOME画面: プレイヤー状態表示 */
+.home-player-status {
+    text-align: center;
+    padding: 10px 16px 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #343a40;
+}
+
+.home-player-level {
+    font-size: 16px;
+    color: #1971c2;
+}
+
+.home-player-status-sep {
+    color: #868e96;
+}
+
+.home-player-slots {
+    font-size: 16px;
+    color: #2f9e44;
+}
+
+.home-next-equip-slot {
+    font-size: 12px;
+    color: #868e96;
+    margin-top: 4px;
+}
+
+/* Rate対戦開始画面: レベル情報 */
+.rated-level-info {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+}
+
+.rated-level-info-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.rated-level-label {
+    color: #868e96;
+}
+
+.rated-level-value {
+    font-weight: 700;
+    color: #343a40;
 }
 
 /* プレースホルダー画面 */
@@ -2860,3 +2987,137 @@ section h3 {
     opacity: 0.45;
 }
 
+/* プレリリース版で一時的に非表示にするUI要素 */
+.pre-release-hidden {
+    display: none;
+}
+
+/* ==========================================================
+   戦型別ステータス上限 - ステータス一覧表示
+   ========================================================== */
+
+.stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 10px 0;
+}
+
+.stat-row {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.stat-row-header {
+    display: grid;
+    grid-template-columns: 42px 1fr auto auto;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.stat-code {
+    font-size: 12px;
+    font-weight: 900;
+    color: #667eea;
+    letter-spacing: 0.08em;
+}
+
+.stat-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #343a40;
+}
+
+.stat-number {
+    font-size: 13px;
+    font-weight: 800;
+    color: #343a40;
+}
+
+.stat-trait {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.trait-very-good {
+    color: #c92a2a;
+    background: #fff5f5;
+    border: 1px solid #ffc9c9;
+}
+
+.trait-good {
+    color: #e67700;
+    background: #fff9db;
+    border: 1px solid #ffe066;
+}
+
+.trait-normal {
+    color: #495057;
+    background: #f1f3f5;
+    border: 1px solid #dee2e6;
+}
+
+.trait-weak {
+    color: #1971c2;
+    background: #e7f5ff;
+    border: 1px solid #a5d8ff;
+}
+
+.trait-very-weak {
+    color: #5f3dc4;
+    background: #f3f0ff;
+    border: 1px solid #d0bfff;
+}
+
+/* ==========================================================
+   育成完成カード
+   ========================================================== */
+
+.training-complete-card {
+    background: linear-gradient(135deg, #fff4e6, #fff);
+    border: 2px solid #ff922b;
+    border-radius: 12px;
+    padding: 14px;
+    margin: 12px 0;
+    text-align: center;
+}
+
+.training-complete-card h3 {
+    font-size: 17px;
+    font-weight: 900;
+    color: #d9480f;
+    margin-bottom: 8px;
+}
+
+.training-complete-card p {
+    font-size: 13px;
+    color: #495057;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+
+.training-complete-rate-btn {
+    background: linear-gradient(135deg, #ff922b, #fd7e14);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.training-complete-rate-btn:hover {
+    opacity: 0.9;
+}
+
+/* データ画面ステータスセクション */
+.data-stats-section {
+    border-left-color: #667eea;
+}
