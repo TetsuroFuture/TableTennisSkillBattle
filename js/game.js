@@ -412,6 +412,8 @@ function renderRatedBattleSummary(targetPlayer) {
             provisionalEl.style.display = 'none';
         }
     }
+
+    renderLevelEquipSlotInfo('rated', targetPlayer);
 }
 
 async function renderRecentRatedBattleList(playerId) {
@@ -1166,6 +1168,7 @@ function renderBattleStartScreen() {
     // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
     player.equippedSkills = [];
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
+    renderLevelEquipSlotInfo('bs', player);
 }
 
 // ============================================================
@@ -1240,6 +1243,38 @@ function renderBattleResultScreen() {
         logEl.innerHTML = r.battleLines
             .map(line => `<div class="battle-log-entry">${line}</div>`)
             .join('');
+    }
+
+    renderBattleResultLevelUpInfo(r);
+}
+
+function renderBattleResultLevelUpInfo(result) {
+    const card = document.getElementById('brLevelUpCard');
+    const levelText = document.getElementById('brLevelUpText');
+    const slotText = document.getElementById('brEquipSlotUpText');
+
+    if (!card || !levelText || !slotText) {
+        return;
+    }
+
+    const info = result.levelUpInfo;
+
+    if (!info || !info.didLevelUp) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    levelText.textContent = `Lv ${info.levelBefore} → Lv ${info.levelAfter}`;
+
+    if (info.didEquipSlotIncrease) {
+        slotText.textContent =
+            `スキル装備枠が増えました！ ${info.slotsBefore}枠 → ${info.slotsAfter}枠`;
+    } else {
+        const nextInfo = getNextEquipSlotUnlockInfo(info.levelAfter);
+        slotText.textContent = nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です';
     }
 }
 
@@ -2173,6 +2208,40 @@ function getMaxEquipSlots(level) {
     return 2;
 }
 
+function getNextEquipSlotUnlockInfo(level) {
+    if (level < 5) {
+        return { nextLevel: 5, nextSlots: 3 };
+    }
+    if (level < 10) {
+        return { nextLevel: 10, nextSlots: 4 };
+    }
+    if (level < 20) {
+        return { nextLevel: 20, nextSlots: 5 };
+    }
+    return null;
+}
+
+function getLevelEquipSlotSummary(targetPlayer) {
+    const level = Number.isFinite(targetPlayer.level) ? targetPlayer.level : 1;
+    const currentSlots = getMaxEquipSlots(level);
+    const nextInfo = getNextEquipSlotUnlockInfo(level);
+
+    return {
+        level,
+        currentSlots,
+        nextInfo,
+        mainText: `Lv ${level}　装備枠 ${currentSlots}`,
+        nextText: nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です'
+    };
+}
+
+function getEquippedSkillCount(targetPlayer) {
+    ensurePlayerEquippedSkills(targetPlayer);
+    return targetPlayer.equippedSkills.length;
+}
+
 function ensurePlayerSkills(targetPlayer) {
     if (!Array.isArray(targetPlayer.skills)) {
         targetPlayer.skills = [];
@@ -2853,6 +2922,27 @@ function updateStyleInfo() {
 }
 
 function renderHomeScreen() {
+    renderLevelEquipSlotInfo('home', player);
+}
+
+function renderLevelEquipSlotInfo(prefix, targetPlayer) {
+    const summary = getLevelEquipSlotSummary(targetPlayer);
+    const equippedCount = getEquippedSkillCount(targetPlayer);
+
+    const levelEl = document.getElementById(`${prefix}PlayerLevel`);
+    if (levelEl) {
+        levelEl.textContent = `Lv ${summary.level}`;
+    }
+
+    const slotsEl = document.getElementById(`${prefix}EquipSlots`);
+    if (slotsEl) {
+        slotsEl.textContent = `${equippedCount} / ${summary.currentSlots}`;
+    }
+
+    const nextEl = document.getElementById(`${prefix}NextEquipSlot`);
+    if (nextEl) {
+        nextEl.textContent = summary.nextText;
+    }
 }
 
 function renderUnifiedSkillList() {
@@ -3177,6 +3267,8 @@ function renderTrainingScreen() {
 
     // プレリリース版ではランダムスキル獲得ボタンはHTMLで非表示。
     // ボタンが存在しても何もしない。
+
+    renderLevelEquipSlotInfo('training', player);
 }
 
 function renderDataScreen() {
@@ -3624,7 +3716,14 @@ function applyMatchResult(result) {
         player.losses += 1;
     }
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     awardExp(expGained);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     updateBattleResultView(result.cpu, result.playerPower, result.cpuPower, result.finalWinRate, result.isPlayerWin);
     renderBattleLog(result.battleLines);
     renderCharacters(result.cpu);
@@ -3680,7 +3779,15 @@ function applyMatchResult(result) {
         rateChange: Number.isFinite(result.rateChange) ? result.rateChange : null,
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
-        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null
+        ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3727,6 +3834,9 @@ function startTournament() {
     let wins = 0;
     let lastResult = null;
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     for (let round = 1; round <= 3; round += 1) {
         const roundResult = simulateBattleWithOptions({
             mode: 'tournament',
@@ -3759,6 +3869,10 @@ function startTournament() {
     }
 
     awardExp(totalExp);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     renderBattleLog(tournamentLogs);
     updateBattleResultView(lastResult.cpu, lastResult.playerPower, lastResult.cpuPower, lastResult.finalWinRate, lastResult.isPlayerWin);
     const tournamentResult = wins === 3 ? 'win' : 'lose';
@@ -3803,7 +3917,15 @@ function startTournament() {
         playerLevel: player.level,
         playerExp: player.exp,
         playerWins: player.wins,
-        playerLosses: player.losses
+        playerLosses: player.losses,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
