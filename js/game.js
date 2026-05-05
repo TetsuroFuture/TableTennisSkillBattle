@@ -869,11 +869,42 @@ function getStyleImageFolder(styleName) {
 }
 
 /**
- * 戦型名と状態（normal/score/win/lose）から画像パスを返す。
+ * 戦型名と状態（normal/score/conceded/win/lose）から画像パスを返す。
  */
 function getRataCharacterImageSrc(styleName, state) {
     const folder = getStyleImageFolder(styleName);
     return `assets/images/style/${folder}/${state}.webp`;
+}
+
+/**
+ * キャラクター画像の状態を切り替える共通関数。
+ * @param {HTMLImageElement} imgEl - 対象の img 要素
+ * @param {string} state - 切り替え先の状態（normal/score/conceded/win/lose）
+ */
+function replaceRataImageState(imgEl, state) {
+    if (!imgEl || !imgEl.src) {
+        return;
+    }
+
+    imgEl.src = imgEl.src.replace(
+        /\/(normal|score|conceded|win|lose)\.webp$/,
+        `/${state}.webp`
+    );
+}
+
+/**
+ * 画像読み込みエラー時に normal.webp へフォールバックする設定を行う。
+ * @param {HTMLImageElement} imgEl - 対象の img 要素
+ */
+function setupRataImageFallback(imgEl) {
+    if (!imgEl) {
+        return;
+    }
+
+    imgEl.onerror = () => {
+        imgEl.onerror = null;
+        replaceRataImageState(imgEl, 'normal');
+    };
 }
 
 function showRatedBattleAnimation(result) {
@@ -911,9 +942,11 @@ function showRatedBattleAnimation(result) {
     const opponentImgEl = document.getElementById('rata-opponent-img');
     if (playerImgEl) {
         playerImgEl.src = getRataCharacterImageSrc(playerStyleName, 'normal');
+        setupRataImageFallback(playerImgEl);
     }
     if (opponentImgEl) {
         opponentImgEl.src = getRataCharacterImageSrc(opponentStyleName, 'normal');
+        setupRataImageFallback(opponentImgEl);
     }
 
     // アニメーションクラスをリセットする
@@ -1036,26 +1069,22 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
     const scorerChar = pointWinner === 'player' ? playerChar : opponentChar;
     const loserChar = pointWinner === 'player' ? opponentChar : playerChar;
     const scorerImg = pointWinner === 'player' ? playerImg : opponentImg;
+    const loserImg = pointWinner === 'player' ? opponentImg : playerImg;
 
     const scoreClass = animationType === 'skill' ? 'anim-skill' : 'anim-score';
     scorerChar.classList.add(scoreClass);
     loserChar.classList.add('anim-lose-point');
 
-    // 得点者の画像を score 状態へ切り替える
-    if (scorerImg && scorerImg.src) {
-        scorerImg.src = scorerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/score.webp');
-    }
+    // 得点者は score、失点者は conceded 状態に切り替える
+    replaceRataImageState(scorerImg, 'score');
+    replaceRataImageState(loserImg, 'conceded');
 
     setTimeout(() => {
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
-        // 画像を normal 状態に戻す
-        if (playerImg && playerImg.src) {
-            playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
-        if (opponentImg && opponentImg.src) {
-            opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, '/normal.webp');
-        }
+        // 両者の画像を normal 状態に戻す
+        replaceRataImageState(playerImg, 'normal');
+        replaceRataImageState(opponentImg, 'normal');
     }, 800);
 }
 
@@ -1113,12 +1142,8 @@ function _showRatedBattleResultSummary(result) {
         opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
     }
     // 勝敗画像へ切り替える
-    if (playerImg && playerImg.src) {
-        playerImg.src = playerImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'win' : 'lose'}.webp`);
-    }
-    if (opponentImg && opponentImg.src) {
-        opponentImg.src = opponentImg.src.replace(/\/(normal|score|win|lose)\.webp$/, `/${result.isPlayerWin ? 'lose' : 'win'}.webp`);
-    }
+    replaceRataImageState(playerImg, result.isPlayerWin ? 'win' : 'lose');
+    replaceRataImageState(opponentImg, result.isPlayerWin ? 'lose' : 'win');
 
     const resultBtn = document.getElementById('rataResultBtn');
     if (resultBtn) {
