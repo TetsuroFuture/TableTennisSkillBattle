@@ -1446,6 +1446,8 @@ function applyPlayerDataToRuntime(data) {
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
+    // プレリリース版では全スキル解放のため、ロード後に全スキルを付与する。
+    unlockAllSkills(player);
     // ロード直後は「保存済み」と見なしてスナップショットを記録する
     lastSavedPlayerData = clonePlayerSnapshot(player);
 }
@@ -2152,8 +2154,8 @@ function getEquippedSkillObjects(targetPlayer) {
     ensurePlayerEquippedSkills(targetPlayer);
     cleanupEquippedSkills(targetPlayer);
 
+    // プレリリース版では全スキル解放のため、skills 配列によるフィルタは行わない。
     return targetPlayer.equippedSkills
-        .filter(skillId => targetPlayer.skills.includes(skillId))
         .map(skillId => getSkillById(skillId))
         .filter(skill => skill !== null);
 }
@@ -2178,8 +2180,22 @@ function ensurePlayerSkills(targetPlayer) {
 }
 
 function hasSkill(targetPlayer, skillId) {
+    // プレリリース版では全スキル解放のため、スキルが存在するIDであれば所持扱いとする。
+    // targetPlayer は将来の収集要素復活に備えて引数として残す（後方互換性）。
+    return Boolean(getSkillById(skillId));
+}
+
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
+function unlockAllSkills(targetPlayer) {
     ensurePlayerSkills(targetPlayer);
-    return targetPlayer.skills.includes(skillId);
+    const ownedSet = new Set(targetPlayer.skills);
+    for (const skill of skillCards) {
+        if (!ownedSet.has(skill.id)) {
+            targetPlayer.skills.push(skill.id);
+            ownedSet.add(skill.id);
+        }
+    }
 }
 
 function addSkillToPlayer(targetPlayer, skillId) {
@@ -2215,10 +2231,7 @@ function equipSkill(targetPlayer, skillId) {
         return false;
     }
 
-    if (!hasSkill(targetPlayer, skillId)) {
-        addLog(`未所持のスキル「${skill.name}」は装備できません。`, 'warning');
-        return false;
-    }
+    // プレリリース版では全スキル解放のため、所持チェックは省略。
 
     if (isSkillEquipped(targetPlayer, skillId)) {
         addLog(`スキル「${skill.name}」はすでに装備中です。`, 'info');
@@ -2292,6 +2305,8 @@ function isSkillEquipped(targetPlayer, skillId) {
     return targetPlayer.equippedSkills.includes(skillId);
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function gainRandomSkill(targetPlayer) {
     const unownedSkills = getUnownedSkills(targetPlayer);
 
@@ -2846,21 +2861,9 @@ function renderUnifiedSkillList() {
         return;
     }
 
+    // プレリリース版では全スキル解放のため、未取得表示は行わない。
     const itemsHtml = skillCards.map(skill => {
-        const owned = hasSkill(player, skill.id);
         const equipped = isSkillEquipped(player, skill.id);
-
-        if (!owned) {
-            return `
-                <div class="skill-card skill-unacquired">
-                    <div class="skill-title-row">
-                        <span class="skill-name">???</span>
-                        <span class="skill-category">???</span>
-                    </div>
-                    <div class="skill-description">???</div>
-                </div>
-            `;
-        }
 
         return `
             <div class="skill-card ${equipped ? 'equipped' : ''}">
@@ -2892,11 +2895,8 @@ function renderPreBattleSkillList(containerId, infoId) {
         infoElement.textContent = `装備中 ${equippedCount} / ${maxSlots}`;
     }
 
-    const ownedSkills = getOwnedSkills(player);
-    if (ownedSkills.length === 0) {
-        container.innerHTML = '<div class="skill-empty">スキルカードを持っていません</div>';
-        return;
-    }
+    // プレリリース版では全スキル解放のため、全スキルカードから選択できる。
+    const availableSkills = skillCards;
 
     const isFulfilled = equippedCount >= maxSlots;
     const promptHtml = `<div class="pre-battle-skill-prompt${isFulfilled ? ' fulfilled' : ''}">
@@ -2905,7 +2905,7 @@ function renderPreBattleSkillList(containerId, infoId) {
             : `⚠️ スキルカードを選択してください（${equippedCount} / ${maxSlots}）`}
     </div>`;
 
-    const chipsHtml = ownedSkills.map(skill => {
+    const chipsHtml = availableSkills.map(skill => {
         const equipped = isSkillEquipped(player, skill.id);
         const canSelect = !equipped && equippedCount < maxSlots;
         const shouldDisable = !equipped && !canSelect;
@@ -3175,11 +3175,8 @@ function renderTrainingScreen() {
         }
     });
 
-    const buyBtn = document.getElementById('buyRandomSkillBtn');
-    if (buyBtn) {
-        const allSkillsOwned = getUnownedSkills(player).length === 0;
-        buyBtn.disabled = player.usableExp < 100 || allSkillsOwned;
-    }
+    // プレリリース版ではランダムスキル獲得ボタンはHTMLで非表示。
+    // ボタンが存在しても何もしない。
 }
 
 function renderDataScreen() {
@@ -3892,6 +3889,8 @@ function setupSkillAcquisitionButton() {
     });
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function spendExpForRandomSkill() {
     const expCost = 100;
     const expReturn = 50;
