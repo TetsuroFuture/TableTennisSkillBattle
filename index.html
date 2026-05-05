@@ -160,6 +160,14 @@
                 <img src="assets/images/Home画面.webp" alt="卓球スキルバトル HOME画面" class="home-visual-img">
             </div>
 
+            <!-- HOME画面: プレイヤー状態 -->
+            <div class="home-player-status">
+                <span id="homePlayerLevel" class="home-player-level">Lv 1</span>
+                <span class="home-player-status-sep">　装備枠　</span>
+                <span id="homeEquipSlots" class="home-player-slots">0 / 2</span>
+                <div id="homeNextEquipSlot" class="home-next-equip-slot">次の装備枠解放：Lv5で3枠</div>
+            </div>
+
             <!-- HOME画面: メニュー -->
             <section class="home-menu-section">
                 <h2>🏓 メニュー</h2>
@@ -203,47 +211,20 @@
                         <span class="value" id="trainingStyleName">未選択</span>
                     </div>
                     <div class="style-sub-desc" id="trainingStyleDesc"></div>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">ATK</div>
-                            <div class="stat-value" id="trainingStatAtk">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingAtkBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">DEF</div>
-                            <div class="stat-value" id="trainingStatDef">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingDefBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">SPD</div>
-                            <div class="stat-value" id="trainingStatSpd">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingSpdBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">TEC</div>
-                            <div class="stat-value" id="trainingStatTec">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingTecBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">STA</div>
-                            <div class="stat-value" id="trainingStatSta">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingStaBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="stat-list" id="trainingStatList"></div>
                     <div class="info-row">
                         <span class="label">EXP:</span>
                         <span class="value" id="trainingPlayerExp">0 / 使用可: 0</span>
                     </div>
+                    <div class="info-row">
+                        <span class="label">レベル:</span>
+                        <span class="value" id="trainingPlayerLevel">Lv 1</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">装備枠:</span>
+                        <span class="value" id="trainingEquipSlots">0 / 2</span>
+                    </div>
+                    <div class="info-row equip-slot-next" id="trainingNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
                 </div>
             </section>
 
@@ -263,13 +244,21 @@
             <!-- スキル管理セクション -->
             <section class="skill-section">
                 <h2>スキルカード</h2>
-                <div class="skill-acquire-row">
+                <p class="skill-section-desc">スキルカードは全種類使用できます。レベルアップで装備枠が増えます。自分の戦型に合う組み合わせを選びましょう。</p>
+                <div class="skill-acquire-row pre-release-hidden">
                     <button class="skill-acquire-btn" id="buyRandomSkillBtn">🎲 ランダムスキル獲得（100EXP）</button>
                 </div>
                 <div class="skill-list" id="unifiedSkillList">
                     <div class="skill-empty">まだスキルカードを持っていません</div>
                 </div>
             </section>
+
+            <!-- 育成完成カード -->
+            <div class="training-complete-card" id="trainingCompleteCard" style="display:none;">
+                <h3>🏆 育成完成！</h3>
+                <p>この選手の基礎能力は完成しました。<br>ここからはスキル構成と作戦選択でRate戦に挑みましょう。</p>
+                <button class="nav-btn training-complete-rate-btn" data-screen="ratedBattleStart">🌏 Rate戦へ挑む</button>
+            </div>
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
@@ -346,6 +335,19 @@
                         <div class="rated-provisional-badge">暫定Rate期間中</div>
                         <div class="rated-provisional-remaining" id="ratedProvisionalRemaining"></div>
                         <div class="rated-provisional-hint">対戦を重ねるほど、Rateが本来の強さに近づいていきます。</div>
+                    </div>
+
+                    <!-- レベル・装備枠情報 -->
+                    <div class="rated-level-info">
+                        <div class="rated-level-info-row">
+                            <span class="rated-level-label">現在の選手：</span>
+                            <span id="ratedPlayerLevel" class="rated-level-value">Lv 1</span>
+                        </div>
+                        <div class="rated-level-info-row">
+                            <span class="rated-level-label">スキル装備枠：</span>
+                            <span id="ratedEquipSlots" class="rated-level-value">0 / 2</span>
+                        </div>
+                        <div class="equip-slot-next" id="ratedNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
                     </div>
                 </div>
 
@@ -483,6 +485,15 @@
                             <span class="value" id="bsPlayerStyle">-</span>
                         </div>
                         <div class="bs-stats-summary" id="bsPlayerStats">-</div>
+                        <div class="info-row">
+                            <span class="label">レベル:</span>
+                            <span class="value" id="bsPlayerLevel">Lv 1</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">装備枠:</span>
+                            <span class="value" id="bsEquipSlots">0 / 2</span>
+                        </div>
+                        <div class="equip-slot-next" id="bsNextEquipSlot">次の装備枠解放：Lv5で3枠</div>
                     </div>
 
                     <div class="battle-start-vs">VS</div>
@@ -724,6 +735,13 @@
                     </div>
                 </div>
 
+                <!-- レベルアップカード -->
+                <div class="br-levelup-card" id="brLevelUpCard" style="display:none;">
+                    <h3>LEVEL UP</h3>
+                    <p id="brLevelUpText"></p>
+                    <p id="brEquipSlotUpText"></p>
+                </div>
+
                 <!-- アクションボタン -->
                 <div class="br-buttons">
                     <button class="battle-btn" id="brPlayAgainBtn">🔄 もう一度試合する</button>
@@ -788,6 +806,12 @@
                         <span class="value" id="dataWinRate">-</span>
                     </div>
                 </div>
+            </section>
+
+            <!-- ステータスセクション -->
+            <section class="data-stats-section">
+                <h2>📊 選手ステータス</h2>
+                <div class="stat-list" id="dataStatList"></div>
             </section>
 
             <!-- HOMEへ戻るボタン -->

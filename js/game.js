@@ -45,6 +45,22 @@ const BALANCE_CONFIG = {
   }
 };
 
+// ============================================================
+// 戦型別ステータス上限
+// ============================================================
+
+const STYLE_STAT_CAPS = {
+    0: { atk: 120, def: 80,  spd: 130, tec: 100, sta: 90  }, // 前陣速攻型
+    1: { atk: 125, def: 85,  spd: 100, tec: 120, sta: 90  }, // オールフォア型
+    2: { atk: 135, def: 85,  spd: 90,  tec: 100, sta: 120 }, // パワー両ハンド型
+    3: { atk: 90,  def: 125, spd: 95,  tec: 125, sta: 100 }, // ブロック＆カウンター型
+    4: { atk: 125, def: 95,  spd: 100, tec: 125, sta: 85  }, // 一撃カウンター型
+    5: { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 }, // オールラウンド型
+    6: { atk: 80,  def: 120, spd: 95,  tec: 130, sta: 105 }, // ペン粒型
+    7: { atk: 85,  def: 135, spd: 80,  tec: 110, sta: 130 }, // カットマン型
+    8: { atk: 105, def: 115, spd: 105, tec: 125, sta: 95  }  // 異質攻守型
+};
+
 let db = null;
 let isFirebaseReady = false;
 let currentPlayerId = null;
@@ -277,8 +293,8 @@ function setupBattleModeSelectButtons() {
 // 全国Rate対戦開始画面
 // ============================================================
 
-const RATED_PROVISIONAL_THRESHOLD = 50;
-const MAX_PROVISIONAL_PENALTY = 500;
+const RATED_PROVISIONAL_THRESHOLD = 20;
+const MAX_PROVISIONAL_PENALTY = 300;
 const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_POOL_SIZE = 10;
 const MAX_OPPONENT_FETCH_SIZE = 50;
@@ -412,6 +428,8 @@ function renderRatedBattleSummary(targetPlayer) {
             provisionalEl.style.display = 'none';
         }
     }
+
+    renderLevelEquipSlotInfo('rated', targetPlayer);
 }
 
 async function renderRecentRatedBattleList(playerId) {
@@ -696,12 +714,12 @@ function renderRatedOpponentPreview(opponent) {
         }
     }
 
-    // プレイヤーのスキルカード選択エリアを表示（未選択状態でリセット）
+    // プレイヤーのスキルカード選択エリアを表示（現在の装備状態を維持）
     const playerSkillArea = document.getElementById('ratedPlayerSkillArea');
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
-    player.equippedSkills = [];
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
 
@@ -1163,9 +1181,10 @@ function renderBattleStartScreen() {
         }
     }
 
-    // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
-    player.equippedSkills = [];
+    // プレイヤーのスキルカード選択を表示（現在の装備状態を維持）
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
+    renderLevelEquipSlotInfo('bs', player);
 }
 
 // ============================================================
@@ -1253,6 +1272,38 @@ function renderBattleResultScreen() {
         } else {
             analysisCard.style.display = 'none';
         }
+    }
+
+    renderBattleResultLevelUpInfo(r);
+}
+
+function renderBattleResultLevelUpInfo(result) {
+    const card = document.getElementById('brLevelUpCard');
+    const levelText = document.getElementById('brLevelUpText');
+    const slotText = document.getElementById('brEquipSlotUpText');
+
+    if (!card || !levelText || !slotText) {
+        return;
+    }
+
+    const info = result.levelUpInfo;
+
+    if (!info || !info.didLevelUp) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    levelText.textContent = `Lv ${info.levelBefore} → Lv ${info.levelAfter}`;
+
+    if (info.didEquipSlotIncrease) {
+        slotText.textContent =
+            `スキル装備枠が増えました！ ${info.slotsBefore}枠 → ${info.slotsAfter}枠`;
+    } else {
+        const nextInfo = getNextEquipSlotUnlockInfo(info.levelAfter);
+        slotText.textContent = nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です';
     }
 }
 
@@ -1459,6 +1510,8 @@ function applyPlayerDataToRuntime(data) {
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
     cleanupEquippedSkills(player);
+    // プレリリース版では全スキル解放のため、ロード後に全スキルを付与する。
+    unlockAllSkills(player);
     // ロード直後は「保存済み」と見なしてスナップショットを記録する
     lastSavedPlayerData = clonePlayerSnapshot(player);
 }
@@ -2165,8 +2218,8 @@ function getEquippedSkillObjects(targetPlayer) {
     ensurePlayerEquippedSkills(targetPlayer);
     cleanupEquippedSkills(targetPlayer);
 
+    // プレリリース版では全スキル解放のため、skills 配列によるフィルタは行わない。
     return targetPlayer.equippedSkills
-        .filter(skillId => targetPlayer.skills.includes(skillId))
         .map(skillId => getSkillById(skillId))
         .filter(skill => skill !== null);
 }
@@ -2184,6 +2237,40 @@ function getMaxEquipSlots(level) {
     return 2;
 }
 
+function getNextEquipSlotUnlockInfo(level) {
+    if (level < 5) {
+        return { nextLevel: 5, nextSlots: 3 };
+    }
+    if (level < 10) {
+        return { nextLevel: 10, nextSlots: 4 };
+    }
+    if (level < 20) {
+        return { nextLevel: 20, nextSlots: 5 };
+    }
+    return null;
+}
+
+function getLevelEquipSlotSummary(targetPlayer) {
+    const level = Number.isFinite(targetPlayer.level) ? targetPlayer.level : 1;
+    const currentSlots = getMaxEquipSlots(level);
+    const nextInfo = getNextEquipSlotUnlockInfo(level);
+
+    return {
+        level,
+        currentSlots,
+        nextInfo,
+        mainText: `Lv ${level}　装備枠 ${currentSlots}`,
+        nextText: nextInfo
+            ? `次の装備枠解放：Lv${nextInfo.nextLevel}で${nextInfo.nextSlots}枠`
+            : '装備枠は最大です'
+    };
+}
+
+function getEquippedSkillCount(targetPlayer) {
+    ensurePlayerEquippedSkills(targetPlayer);
+    return targetPlayer.equippedSkills.length;
+}
+
 function ensurePlayerSkills(targetPlayer) {
     if (!Array.isArray(targetPlayer.skills)) {
         targetPlayer.skills = [];
@@ -2191,8 +2278,22 @@ function ensurePlayerSkills(targetPlayer) {
 }
 
 function hasSkill(targetPlayer, skillId) {
+    // プレリリース版では全スキル解放のため、スキルが存在するIDであれば所持扱いとする。
+    // targetPlayer は将来の収集要素復活に備えて引数として残す（後方互換性）。
+    return Boolean(getSkillById(skillId));
+}
+
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
+function unlockAllSkills(targetPlayer) {
     ensurePlayerSkills(targetPlayer);
-    return targetPlayer.skills.includes(skillId);
+    const ownedSet = new Set(targetPlayer.skills);
+    for (const skill of skillCards) {
+        if (!ownedSet.has(skill.id)) {
+            targetPlayer.skills.push(skill.id);
+            ownedSet.add(skill.id);
+        }
+    }
 }
 
 function addSkillToPlayer(targetPlayer, skillId) {
@@ -2228,10 +2329,7 @@ function equipSkill(targetPlayer, skillId) {
         return false;
     }
 
-    if (!hasSkill(targetPlayer, skillId)) {
-        addLog(`未所持のスキル「${skill.name}」は装備できません。`, 'warning');
-        return false;
-    }
+    // プレリリース版では全スキル解放のため、所持チェックは省略。
 
     if (isSkillEquipped(targetPlayer, skillId)) {
         addLog(`スキル「${skill.name}」はすでに装備中です。`, 'info');
@@ -2305,6 +2403,8 @@ function isSkillEquipped(targetPlayer, skillId) {
     return targetPlayer.equippedSkills.includes(skillId);
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function gainRandomSkill(targetPlayer) {
     const unownedSkills = getUnownedSkills(targetPlayer);
 
@@ -2511,10 +2611,46 @@ function generateSkillBattleLogs(targetPlayer, context = {}) {
 }
 
 function calculateBattleSkillBonus(targetPlayer, context = {}) {
-    // Phase7(先行)では未実装: バトルイベント補正はまだ適用しない
-    void targetPlayer;
-    void context;
-    return 0;
+    const equippedSkills = getEquippedSkillObjects(targetPlayer);
+    let bonus = 0;
+
+    equippedSkills.forEach(skill => {
+        const effects = skill.effects || {};
+
+        if (effects.finishRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.attackChainRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.counterRate) {
+            bonus += 0.04;
+        }
+
+        if (effects.counterEventRate) {
+            bonus += 0.03;
+        }
+
+        if (effects.enemyMistakeRate) {
+            bonus += 0.03;
+        }
+
+        if (context.isDisadvantage && effects.comebackEventRate) {
+            bonus += 0.05;
+        }
+
+        if (effects.randomRangeRate) {
+            bonus += 0.02;
+        }
+
+        if (effects.enemyFinishRate) {
+            bonus += 0.03;
+        }
+    });
+
+    return clamp(bonus, -0.08, 0.10);
 }
 
 function applyEnemyDebuffFromSkills(owner, enemyEffective, activationContext) {
@@ -2851,6 +2987,27 @@ function updateStyleInfo() {
 }
 
 function renderHomeScreen() {
+    renderLevelEquipSlotInfo('home', player);
+}
+
+function renderLevelEquipSlotInfo(prefix, targetPlayer) {
+    const summary = getLevelEquipSlotSummary(targetPlayer);
+    const equippedCount = getEquippedSkillCount(targetPlayer);
+
+    const levelEl = document.getElementById(`${prefix}PlayerLevel`);
+    if (levelEl) {
+        levelEl.textContent = `Lv ${summary.level}`;
+    }
+
+    const slotsEl = document.getElementById(`${prefix}EquipSlots`);
+    if (slotsEl) {
+        slotsEl.textContent = `${equippedCount} / ${summary.currentSlots}`;
+    }
+
+    const nextEl = document.getElementById(`${prefix}NextEquipSlot`);
+    if (nextEl) {
+        nextEl.textContent = summary.nextText;
+    }
 }
 
 function renderUnifiedSkillList() {
@@ -2859,21 +3016,9 @@ function renderUnifiedSkillList() {
         return;
     }
 
+    // プレリリース版では全スキル解放のため、未取得表示は行わない。
     const itemsHtml = skillCards.map(skill => {
-        const owned = hasSkill(player, skill.id);
         const equipped = isSkillEquipped(player, skill.id);
-
-        if (!owned) {
-            return `
-                <div class="skill-card skill-unacquired">
-                    <div class="skill-title-row">
-                        <span class="skill-name">???</span>
-                        <span class="skill-category">???</span>
-                    </div>
-                    <div class="skill-description">???</div>
-                </div>
-            `;
-        }
 
         return `
             <div class="skill-card ${equipped ? 'equipped' : ''}">
@@ -2905,11 +3050,8 @@ function renderPreBattleSkillList(containerId, infoId) {
         infoElement.textContent = `装備中 ${equippedCount} / ${maxSlots}`;
     }
 
-    const ownedSkills = getOwnedSkills(player);
-    if (ownedSkills.length === 0) {
-        container.innerHTML = '<div class="skill-empty">スキルカードを持っていません</div>';
-        return;
-    }
+    // プレリリース版では全スキル解放のため、全スキルカードから選択できる。
+    const availableSkills = skillCards;
 
     const isFulfilled = equippedCount >= maxSlots;
     const promptHtml = `<div class="pre-battle-skill-prompt${isFulfilled ? ' fulfilled' : ''}">
@@ -2918,7 +3060,7 @@ function renderPreBattleSkillList(containerId, infoId) {
             : `⚠️ スキルカードを選択してください（${equippedCount} / ${maxSlots}）`}
     </div>`;
 
-    const chipsHtml = ownedSkills.map(skill => {
+    const chipsHtml = availableSkills.map(skill => {
         const equipped = isSkillEquipped(player, skill.id);
         const canSelect = !equipped && equippedCount < maxSlots;
         const shouldDisable = !equipped && !canSelect;
@@ -3174,25 +3316,13 @@ function renderTrainingScreen() {
         trainingPlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
     }
 
-    const maxStat = 50;
-    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
-    statKeys.forEach(label => {
-        const key = label.toLowerCase();
-        const valEl = document.getElementById(`trainingStat${label}`);
-        if (valEl) {
-            valEl.textContent = player[key];
-        }
-        const barEl = document.getElementById(`training${label}Bar`);
-        if (barEl) {
-            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
-        }
-    });
+    renderStatRows('trainingStatList', player);
+    renderTrainingCompleteCard();
 
-    const buyBtn = document.getElementById('buyRandomSkillBtn');
-    if (buyBtn) {
-        const allSkillsOwned = getUnownedSkills(player).length === 0;
-        buyBtn.disabled = player.usableExp < 100 || allSkillsOwned;
-    }
+    // プレリリース版ではランダムスキル獲得ボタンはHTMLで非表示。
+    // ボタンが存在しても何もしない。
+
+    renderLevelEquipSlotInfo('training', player);
 }
 
 function renderDataScreen() {
@@ -3264,6 +3394,8 @@ function renderDataScreen() {
             dataWinRate.textContent = '-';
         }
     }
+
+    renderStatRows('dataStatList', player);
 }
 
 function renderAll() {
@@ -3719,7 +3851,14 @@ function applyMatchResult(result) {
         player.losses += 1;
     }
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     awardExp(expGained);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     updateBattleResultView(result.cpu, result.playerPower, result.cpuPower, result.finalWinRate, result.isPlayerWin);
     renderBattleLog(result.battleLines);
     renderCharacters(result.cpu);
@@ -3776,7 +3915,15 @@ function applyMatchResult(result) {
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
         ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
-        postMatchAnalysis: buildPostMatchAnalysis(result, player)
+        postMatchAnalysis: buildPostMatchAnalysis(result, player),
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3823,6 +3970,9 @@ function startTournament() {
     let wins = 0;
     let lastResult = null;
 
+    const levelBefore = player.level;
+    const slotsBefore = getMaxEquipSlots(levelBefore);
+
     for (let round = 1; round <= 3; round += 1) {
         const roundResult = simulateBattleWithOptions({
             mode: 'tournament',
@@ -3855,6 +4005,10 @@ function startTournament() {
     }
 
     awardExp(totalExp);
+
+    const levelAfter = player.level;
+    const slotsAfter = getMaxEquipSlots(levelAfter);
+
     renderBattleLog(tournamentLogs);
     updateBattleResultView(lastResult.cpu, lastResult.playerPower, lastResult.cpuPower, lastResult.finalWinRate, lastResult.isPlayerWin);
     const tournamentResult = wins === 3 ? 'win' : 'lose';
@@ -3899,7 +4053,15 @@ function startTournament() {
         playerLevel: player.level,
         playerExp: player.exp,
         playerWins: player.wins,
-        playerLosses: player.losses
+        playerLosses: player.losses,
+        levelUpInfo: {
+            levelBefore,
+            levelAfter,
+            slotsBefore,
+            slotsAfter,
+            didLevelUp: levelAfter > levelBefore,
+            didEquipSlotIncrease: slotsAfter > slotsBefore
+        }
     };
     changeScreen('battleResult');
 }
@@ -3941,13 +4103,19 @@ function setupTrainingButtons() {
                 return;
             }
 
+            const cap = getStatCap(player.style, stat);
+            if (player[stat] >= cap) {
+                addLog(`${getStatDisplayName(stat)}はこの戦型の上限（${cap}）に達しています。`, 'warning');
+                return;
+            }
+
             if (player.usableExp < expCost) {
                 addLog(`${stat.toUpperCase()}の強化には${expCost}EXPが必要です。現在: ${player.usableExp}EXP`, 'warning');
                 return;
             }
 
             player.usableExp -= expCost;
-            player[stat] += 1;
+            player[stat] = Math.min(cap, player[stat] + 1);
             // 育成ボタンクリックごとの個別保存は廃止。画面遷移時に一括保存する。
 
             player.level += 1;
@@ -3985,6 +4153,8 @@ function setupSkillAcquisitionButton() {
     });
 }
 
+// プレリリース版ではスキル全解放のため、ランダム獲得機能はUIから非表示。
+// 将来的な収集要素復活に備えて関数は残す。
 function spendExpForRandomSkill() {
     const expCost = 100;
     const expReturn = 50;
@@ -4205,6 +4375,99 @@ function getStatName(stat) {
         sta: 'スタミナ（STA）'
     };
     return statNames[stat] || stat;
+}
+
+// ステータス上限を返す（戦型未選択時はfallbackを使用）
+function getStatCap(styleId, stat) {
+    const fallbackCaps = { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 };
+    const caps = STYLE_STAT_CAPS[styleId] || fallbackCaps;
+    return caps[stat] || fallbackCaps[stat] || 110;
+}
+
+// ステータス表示名を返す
+function getStatDisplayName(stat) {
+    const names = {
+        atk: '攻撃力',
+        def: '守備力',
+        spd: 'スピード',
+        tec: '技術',
+        sta: 'スタミナ'
+    };
+    return names[stat] || stat;
+}
+
+// 上限値に応じた得意/苦手ラベルを返す
+function getStatTraitLabel(cap) {
+    if (cap >= 125) return '超得意';
+    if (cap >= 115) return '得意';
+    if (cap >= 100) return '標準';
+    if (cap >= 90) return 'やや苦手';
+    return '苦手';
+}
+
+// 上限値に応じたCSSクラスを返す
+function getStatTraitClass(cap) {
+    if (cap >= 125) return 'trait-very-good';
+    if (cap >= 115) return 'trait-good';
+    if (cap >= 100) return 'trait-normal';
+    if (cap >= 90) return 'trait-weak';
+    return 'trait-very-weak';
+}
+
+// 表示用ステータス値（上限で丸める）
+function getDisplayStatValue(targetPlayer, stat) {
+    const cap = getStatCap(targetPlayer.style, stat);
+    return Math.min(targetPlayer[stat], cap);
+}
+
+// 全ステータスが上限に達しているか判定する
+function isAllStatsCapped(targetPlayer) {
+    const stats = ['atk', 'def', 'spd', 'tec', 'sta'];
+    return stats.every(stat => {
+        const cap = getStatCap(targetPlayer.style, stat);
+        return targetPlayer[stat] >= cap;
+    });
+}
+
+// 育成完成カードの表示/非表示を更新する
+function renderTrainingCompleteCard() {
+    const card = document.getElementById('trainingCompleteCard');
+    if (!card) {
+        return;
+    }
+    card.style.display = isAllStatsCapped(player) ? '' : 'none';
+}
+
+// ステータス行一覧をコンテナに描画する
+function renderStatRows(containerId, targetPlayer) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+    const stats = [
+        { key: 'atk', code: 'ATK' },
+        { key: 'def', code: 'DEF' },
+        { key: 'spd', code: 'SPD' },
+        { key: 'tec', code: 'TEC' },
+        { key: 'sta', code: 'STA' }
+    ];
+    container.innerHTML = stats.map(({ key, code }) => {
+        const cap = getStatCap(targetPlayer.style, key);
+        const displayVal = getDisplayStatValue(targetPlayer, key);
+        const percent = Math.min(100, (displayVal / cap * 100));
+        const traitLabel = getStatTraitLabel(cap);
+        const traitClass = getStatTraitClass(cap);
+        const name = getStatDisplayName(key);
+        return `<div class="stat-row">
+  <div class="stat-row-header">
+    <span class="stat-code">${code}</span>
+    <span class="stat-name">${name}</span>
+    <span class="stat-number">${displayVal} / ${cap}</span>
+    <span class="stat-trait ${traitClass}">${traitLabel}</span>
+  </div>
+  <div class="stat-bar"><div class="stat-bar-fill" style="width:${percent}%"></div></div>
+</div>`;
+    }).join('');
 }
 
 // ============================================================
