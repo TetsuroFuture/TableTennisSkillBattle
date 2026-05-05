@@ -1960,6 +1960,68 @@ section h3 {
     margin: 0;
 }
 
+.br-advantage-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #ff922b;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.br-advantage-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #343a40;
+}
+
+.br-advantage-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.br-advantage-row:last-of-type {
+    border-bottom: none;
+}
+
+.br-advantage-label {
+    font-size: 13px;
+    color: #495057;
+    font-weight: 600;
+}
+
+.br-advantage-value {
+    font-size: 13px;
+    color: #343a40;
+    font-weight: 800;
+}
+
+.br-advantage-final {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 2px solid #e9ecef;
+    border-bottom: none;
+}
+
+.br-advantage-final .br-advantage-label,
+.br-advantage-final .br-advantage-value {
+    font-size: 14px;
+    font-weight: 900;
+    color: #d9480f;
+}
+
+.br-advantage-note {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #868e96;
+    line-height: 1.5;
+}
+
 /* レベルアップカード */
 .br-levelup-card {
     background: linear-gradient(135deg, #fff9db, #fff3bf);

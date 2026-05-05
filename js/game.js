@@ -1187,6 +1187,44 @@ function renderBattleStartScreen() {
     renderLevelEquipSlotInfo('bs', player);
 }
 
+function formatAdvantageDelta(value) {
+    const percent = Math.round(value * 100);
+    return `${percent >= 0 ? '+' : ''}${percent}%`;
+}
+
+function formatAdvantagePercent(value) {
+    return `${Math.round(value * 100)}%`;
+}
+
+function renderAdvantageBreakdown(result) {
+    const card = document.getElementById('brAdvantageCard');
+    const breakdown = result.advantageBreakdown;
+
+    if (!card) {
+        return;
+    }
+
+    if (!breakdown) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+
+    const setEl = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+        }
+    };
+
+    setEl('brAdvantageBase', formatAdvantageDelta(breakdown.baseAdvantage || 0));
+    setEl('brAdvantageMatchup', formatAdvantageDelta(breakdown.matchupBonus || 0));
+    setEl('brAdvantageSkill', formatAdvantageDelta(breakdown.skillBonus || 0));
+    setEl('brAdvantageTactic', formatAdvantageDelta(breakdown.tacticBonus || 0));
+    setEl('brAdvantagePointRate', formatAdvantagePercent(breakdown.pointWinRate ?? 0.5));
+}
+
 // ============================================================
 
 function renderBattleResultScreen() {
@@ -1284,6 +1322,7 @@ function renderBattleResultScreen() {
         }
     }
 
+    renderAdvantageBreakdown(r);
     renderBattleResultLevelUpInfo(r);
 }
 
@@ -2891,6 +2930,17 @@ function simulateBattleWithOptions(options = {}) {
     const pointMatch = simulatePointMatch(finalWinRate);
     const isPlayerWin = pointMatch.isPlayerWin;
 
+    const advantageBreakdown = {
+        baseRate,
+        baseAdvantage: baseRate - 0.5,
+        matchupBonus: adjustedMatchupModifier,
+        skillBonus: skillWinRateBonus + skillBattleBonus,
+        skillWinRateBonus,
+        skillBattleBonus,
+        tacticBonus: tacticWinRateBonus,
+        pointWinRate: finalWinRate
+    };
+
     const battleLines = [
         ...generateModeStartLog(mode, enemy),
         ...(roundIndex !== null ? [`大会 第${roundIndex + 1}試合`] : []),
@@ -2912,6 +2962,7 @@ function simulateBattleWithOptions(options = {}) {
         playerPower,
         cpuPower,
         finalWinRate,
+        advantageBreakdown,
         pointMatch,
         playerScore: pointMatch.playerScore,
         enemyScore: pointMatch.enemyScore,
@@ -3985,6 +4036,7 @@ function applyMatchResult(result) {
         displayRateBefore: Number.isFinite(result.displayRateBefore) ? result.displayRateBefore : null,
         displayRateAfter: Number.isFinite(result.displayRateAfter) ? result.displayRateAfter : null,
         ratedMatchesAfter: Number.isFinite(result.ratedMatchesAfter) ? result.ratedMatchesAfter : null,
+        advantageBreakdown: result.advantageBreakdown || null,
         postMatchAnalysis: buildPostMatchAnalysis(result, player),
         levelUpInfo: {
             levelBefore,
