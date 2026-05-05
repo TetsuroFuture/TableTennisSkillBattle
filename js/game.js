@@ -3544,6 +3544,15 @@ function simulateGamePoints(perPointRate, firstServerIsPlayer, playerStyleName, 
     return { lines, playerScore, cpuScore };
 }
 
+/**
+ * 1点ごとの得点確率を使って11点先取・デュースありの試合をシミュレートする。
+ * @param {number} pointWinRate - プレイヤーが1点を取る確率（0〜1）
+ * @param {object} [options]
+ * @param {number} [options.targetScore=11] - 先取点数
+ * @param {number} [options.requiredDiff=2] - 勝利に必要な点差
+ * @param {number} [options.maxScore=30] - 極端な長期デュース防止のための最大スコア上限
+ * @returns {{isPlayerWin: boolean, playerScore: number, enemyScore: number, pointResults: Array}}
+ */
 function simulatePointMatch(pointWinRate, options = {}) {
     const targetScore = options.targetScore || 11;
     const requiredDiff = options.requiredDiff || 2;
