@@ -45,6 +45,22 @@ const BALANCE_CONFIG = {
   }
 };
 
+// ============================================================
+// 戦型別ステータス上限
+// ============================================================
+
+const STYLE_STAT_CAPS = {
+    0: { atk: 120, def: 80,  spd: 130, tec: 100, sta: 90  }, // 前陣速攻型
+    1: { atk: 125, def: 85,  spd: 100, tec: 120, sta: 90  }, // オールフォア型
+    2: { atk: 135, def: 85,  spd: 90,  tec: 100, sta: 120 }, // パワー両ハンド型
+    3: { atk: 90,  def: 125, spd: 95,  tec: 125, sta: 100 }, // ブロック＆カウンター型
+    4: { atk: 125, def: 95,  spd: 100, tec: 125, sta: 85  }, // 一撃カウンター型
+    5: { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 }, // オールラウンド型
+    6: { atk: 80,  def: 120, spd: 95,  tec: 130, sta: 105 }, // ペン粒型
+    7: { atk: 85,  def: 135, spd: 80,  tec: 110, sta: 130 }, // カットマン型
+    8: { atk: 105, def: 115, spd: 105, tec: 125, sta: 95  }  // 異質攻守型
+};
+
 let db = null;
 let isFirebaseReady = false;
 let currentPlayerId = null;
@@ -3161,19 +3177,8 @@ function renderTrainingScreen() {
         trainingPlayerExp.textContent = `${player.exp} / 使用可: ${player.usableExp}`;
     }
 
-    const maxStat = 50;
-    const statKeys = ['Atk', 'Def', 'Spd', 'Tec', 'Sta'];
-    statKeys.forEach(label => {
-        const key = label.toLowerCase();
-        const valEl = document.getElementById(`trainingStat${label}`);
-        if (valEl) {
-            valEl.textContent = player[key];
-        }
-        const barEl = document.getElementById(`training${label}Bar`);
-        if (barEl) {
-            barEl.style.width = Math.min(100, (player[key] / maxStat * 100)) + '%';
-        }
-    });
+    renderStatRows('trainingStatList', player);
+    renderTrainingCompleteCard();
 
     const buyBtn = document.getElementById('buyRandomSkillBtn');
     if (buyBtn) {
@@ -3251,6 +3256,8 @@ function renderDataScreen() {
             dataWinRate.textContent = '-';
         }
     }
+
+    renderStatRows('dataStatList', player);
 }
 
 function renderAll() {
@@ -3848,13 +3855,19 @@ function setupTrainingButtons() {
                 return;
             }
 
+            const cap = getStatCap(player.style, stat);
+            if (player[stat] >= cap) {
+                addLog(`${getStatDisplayName(stat)}はこの戦型の上限（${cap}）に達しています。`, 'warning');
+                return;
+            }
+
             if (player.usableExp < expCost) {
                 addLog(`${stat.toUpperCase()}の強化には${expCost}EXPが必要です。現在: ${player.usableExp}EXP`, 'warning');
                 return;
             }
 
             player.usableExp -= expCost;
-            player[stat] += 1;
+            player[stat] = Math.min(cap, player[stat] + 1);
             // 育成ボタンクリックごとの個別保存は廃止。画面遷移時に一括保存する。
 
             player.level += 1;
@@ -4112,6 +4125,99 @@ function getStatName(stat) {
         sta: 'スタミナ（STA）'
     };
     return statNames[stat] || stat;
+}
+
+// ステータス上限を返す（戦型未選択時はfallbackを使用）
+function getStatCap(styleId, stat) {
+    const fallbackCaps = { atk: 110, def: 110, spd: 110, tec: 110, sta: 110 };
+    const caps = STYLE_STAT_CAPS[styleId] || fallbackCaps;
+    return caps[stat] || fallbackCaps[stat] || 110;
+}
+
+// ステータス表示名を返す
+function getStatDisplayName(stat) {
+    const names = {
+        atk: '攻撃力',
+        def: '守備力',
+        spd: 'スピード',
+        tec: '技術',
+        sta: 'スタミナ'
+    };
+    return names[stat] || stat;
+}
+
+// 上限値に応じた得意/苦手ラベルを返す
+function getStatTraitLabel(cap) {
+    if (cap >= 125) return '超得意';
+    if (cap >= 115) return '得意';
+    if (cap >= 100) return '標準';
+    if (cap >= 90) return 'やや苦手';
+    return '苦手';
+}
+
+// 上限値に応じたCSSクラスを返す
+function getStatTraitClass(cap) {
+    if (cap >= 125) return 'trait-very-good';
+    if (cap >= 115) return 'trait-good';
+    if (cap >= 100) return 'trait-normal';
+    if (cap >= 90) return 'trait-weak';
+    return 'trait-very-weak';
+}
+
+// 表示用ステータス値（上限で丸める）
+function getDisplayStatValue(targetPlayer, stat) {
+    const cap = getStatCap(targetPlayer.style, stat);
+    return Math.min(targetPlayer[stat], cap);
+}
+
+// 全ステータスが上限に達しているか判定する
+function isAllStatsCapped(targetPlayer) {
+    const stats = ['atk', 'def', 'spd', 'tec', 'sta'];
+    return stats.every(stat => {
+        const cap = getStatCap(targetPlayer.style, stat);
+        return targetPlayer[stat] >= cap;
+    });
+}
+
+// 育成完成カードの表示/非表示を更新する
+function renderTrainingCompleteCard() {
+    const card = document.getElementById('trainingCompleteCard');
+    if (!card) {
+        return;
+    }
+    card.style.display = isAllStatsCapped(player) ? '' : 'none';
+}
+
+// ステータス行一覧をコンテナに描画する
+function renderStatRows(containerId, targetPlayer) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        return;
+    }
+    const stats = [
+        { key: 'atk', code: 'ATK' },
+        { key: 'def', code: 'DEF' },
+        { key: 'spd', code: 'SPD' },
+        { key: 'tec', code: 'TEC' },
+        { key: 'sta', code: 'STA' }
+    ];
+    container.innerHTML = stats.map(({ key, code }) => {
+        const cap = getStatCap(targetPlayer.style, key);
+        const displayVal = Math.min(targetPlayer[key], cap);
+        const percent = Math.min(100, (displayVal / cap * 100));
+        const traitLabel = getStatTraitLabel(cap);
+        const traitClass = getStatTraitClass(cap);
+        const name = getStatDisplayName(key);
+        return `<div class="stat-row">
+  <div class="stat-row-header">
+    <span class="stat-code">${code}</span>
+    <span class="stat-name">${name}</span>
+    <span class="stat-number">${displayVal} / ${cap}</span>
+    <span class="stat-trait ${traitClass}">${traitLabel}</span>
+  </div>
+  <div class="stat-bar"><div class="stat-bar-fill" style="width:${percent}%"></div></div>
+</div>`;
+    }).join('');
 }
 
 // ============================================================

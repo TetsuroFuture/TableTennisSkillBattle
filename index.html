@@ -203,43 +203,7 @@
                         <span class="value" id="trainingStyleName">未選択</span>
                     </div>
                     <div class="style-sub-desc" id="trainingStyleDesc"></div>
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">ATK</div>
-                            <div class="stat-value" id="trainingStatAtk">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingAtkBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">DEF</div>
-                            <div class="stat-value" id="trainingStatDef">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingDefBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">SPD</div>
-                            <div class="stat-value" id="trainingStatSpd">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingSpdBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">TEC</div>
-                            <div class="stat-value" id="trainingStatTec">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingTecBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">STA</div>
-                            <div class="stat-value" id="trainingStatSta">10</div>
-                            <div class="stat-bar">
-                                <div class="stat-bar-fill" id="trainingStaBar" style="width: 20%;"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="stat-list" id="trainingStatList"></div>
                     <div class="info-row">
                         <span class="label">EXP:</span>
                         <span class="value" id="trainingPlayerExp">0 / 使用可: 0</span>
@@ -270,6 +234,13 @@
                     <div class="skill-empty">まだスキルカードを持っていません</div>
                 </div>
             </section>
+
+            <!-- 育成完成カード -->
+            <div class="training-complete-card" id="trainingCompleteCard" style="display:none;">
+                <h3>🏆 育成完成！</h3>
+                <p>この選手の基礎能力は完成しました。<br>ここからはスキル構成と作戦選択でRate戦に挑みましょう。</p>
+                <button class="nav-btn training-complete-rate-btn" data-screen="ratedBattleStart">🌏 Rate戦へ挑む</button>
+            </div>
 
             <!-- HOMEへ戻るボタン -->
             <div class="settings-back-row">
@@ -771,6 +742,12 @@
                         <span class="value" id="dataWinRate">-</span>
                     </div>
                 </div>
+            </section>
+
+            <!-- ステータスセクション -->
+            <section class="data-stats-section">
+                <h2>📊 選手ステータス</h2>
+                <div class="stat-list" id="dataStatList"></div>
             </section>
 
             <!-- HOMEへ戻るボタン -->
