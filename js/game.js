@@ -714,12 +714,12 @@ function renderRatedOpponentPreview(opponent) {
         }
     }
 
-    // プレイヤーのスキルカード選択エリアを表示（未選択状態でリセット）
+    // プレイヤーのスキルカード選択エリアを表示（現在の装備状態を維持）
     const playerSkillArea = document.getElementById('ratedPlayerSkillArea');
     if (playerSkillArea) {
         playerSkillArea.style.display = '';
     }
-    player.equippedSkills = [];
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('ratedPlayerSkillList', 'ratedEquipSlotsInfo');
 }
 
@@ -1181,8 +1181,8 @@ function renderBattleStartScreen() {
         }
     }
 
-    // プレイヤーのスキルカード選択を表示（毎回未選択状態でリセット）
-    player.equippedSkills = [];
+    // プレイヤーのスキルカード選択を表示（現在の装備状態を維持）
+    cleanupEquippedSkills(player);
     renderPreBattleSkillList('bsPlayerSkillList', 'bsEquipSlotsInfo');
     renderLevelEquipSlotInfo('bs', player);
 }
