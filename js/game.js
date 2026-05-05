@@ -4048,6 +4048,91 @@ function setupBattleResultButtons() {
     }
 }
 
+function buildShareText(result) {
+    const lines = [];
+
+    const playerStyle = result.playerStyle || '未選択';
+    const enemyStyle = result.cpuStyle || '相手';
+    const isWin = result.isPlayerWin;
+    const resultText = isWin ? 'WIN' : 'LOSE';
+
+    lines.push('🏓 Table Tennis Skills Battle');
+    lines.push('');
+    lines.push(`戦型：${playerStyle}`);
+    lines.push(`結果：${resultText}`);
+
+    // バトルログから最終スコアを抽出する
+    const scoreLine = Array.isArray(result.battleLines)
+        ? result.battleLines.find(line => line.startsWith('最終スコア '))
+        : null;
+    if (scoreLine) {
+        const m = scoreLine.match(/最終スコア (\d+)-(\d+)/);
+        if (m) {
+            lines.push(`スコア：${m[1]} - ${m[2]}`);
+        }
+    }
+
+    if (result.mode === 'rated') {
+        const before = result.displayRateBefore;
+        const after = result.displayRateAfter;
+        const change = result.rateChange;
+
+        if (Number.isFinite(before) && Number.isFinite(after) && Number.isFinite(change)) {
+            const sign = change >= 0 ? '+' : '';
+            lines.push(`Rate：${before} → ${after}（${sign}${change}）`);
+        }
+    }
+
+    if (enemyStyle) {
+        lines.push(`相手：${enemyStyle}`);
+    }
+
+    const analysis = result.postMatchAnalysis;
+    if (analysis && analysis.keyPoint) {
+        lines.push('');
+        lines.push(`勝因/敗因：${analysis.keyPoint}`);
+    } else if (analysis && analysis.resultComment) {
+        lines.push('');
+        lines.push(analysis.resultComment);
+    }
+
+    lines.push('');
+    lines.push('育てろ、君だけの戦型。');
+    lines.push('#卓球 #卓球ゲーム #TableTennisSkillsBattle');
+
+    return lines.join('\n');
+}
+
+function buildXShareUrl(text) {
+    const encodedText = encodeURIComponent(truncateShareText(text));
+    return `https://x.com/intent/tweet?text=${encodedText}`;
+}
+
+function truncateShareText(text, maxLength = 280) {
+    if (text.length <= maxLength) {
+        return text;
+    }
+    return text.slice(0, maxLength - 1) + '…';
+}
+
+function setupShareButtons() {
+    const shareBtn = document.getElementById('shareXBtn');
+
+    if (!shareBtn) {
+        return;
+    }
+
+    shareBtn.addEventListener('click', () => {
+        if (!lastBattleResult) {
+            return;
+        }
+
+        const text = buildShareText(lastBattleResult);
+        const url = buildXShareUrl(text);
+        window.open(url, '_blank', 'noopener,noreferrer');
+    });
+}
+
 function setupTacticSelect() {
     const tacticSelect = document.getElementById('tacticSelect');
     if (!tacticSelect) {
@@ -4823,6 +4908,7 @@ async function initGame() {
     setupDebugSkillButton();
     setupManualSaveButton();
     setupBattleResultButtons();
+    setupShareButtons();
     setupInitialSetupOverlay();
     setupLoginOverlay();
     setupChangePasswordModal();
