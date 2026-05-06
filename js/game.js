@@ -4567,6 +4567,7 @@ function buildShareText(result) {
 
     lines.push('🏓 Table Tennis Skills Battle');
     lines.push('');
+    lines.push(`プレイヤー：${result.playerName || '不明'}`);
     lines.push(`戦型：${playerStyle}`);
     lines.push(`結果：${resultText}`);
 
@@ -4608,6 +4609,7 @@ function buildShareText(result) {
     lines.push('');
     lines.push('育てろ、君だけの戦型。');
     lines.push('#卓球 #卓球ゲーム #TableTennisSkillsBattle');
+    lines.push('https://TetsuroFuture.github.io/TableTennisSkillBattle/');
 
     return lines.join('\n');
 }
