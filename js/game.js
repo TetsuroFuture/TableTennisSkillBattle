@@ -4597,15 +4597,6 @@ function buildShareText(result) {
         lines.push(`相手：${enemyStyle}`);
     }
 
-    const analysis = result.postMatchAnalysis;
-    if (analysis && analysis.keyPoint) {
-        lines.push('');
-        lines.push(`勝因/敗因：${analysis.keyPoint}`);
-    } else if (analysis && analysis.resultComment) {
-        lines.push('');
-        lines.push(analysis.resultComment);
-    }
-
     lines.push('');
     lines.push('育てろ、君だけの戦型。');
     lines.push('#卓球 #卓球ゲーム #TableTennisSkillsBattle');
