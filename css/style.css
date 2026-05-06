@@ -3203,6 +3203,35 @@ section h3 {
 }
 
 /* ==========================================================
+   プレリリース版: バッジ・ログイン注意文
+   ========================================================== */
+
+.pre-release-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.12);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    border-radius: 999px;
+    padding: 3px 8px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.login-warning-note {
+    font-size: 12px;
+    color: #868e96;
+    line-height: 1.6;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+}
+
+/* ==========================================================
    戦型別ステータス上限 - ステータス一覧表示
    ========================================================== */
 
@@ -3331,3 +3360,4 @@ section h3 {
 .data-stats-section {
     border-left-color: #667eea;
 }
+
