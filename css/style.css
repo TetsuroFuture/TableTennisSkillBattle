@@ -2946,6 +2946,37 @@ section h3 {
     transform: scaleX(-1) translateY(-20px) scale(1.1);
 }
 
+/* レート戦勝利ジャンプアニメーション */
+@keyframes rataWinBounce {
+    0%   { transform: translateY(-20px) scale(1.1); }
+    20%  { transform: translateY(-44px) scale(1.18); }
+    40%  { transform: translateY(-20px) scale(1.1); }
+    60%  { transform: translateY(-38px) scale(1.15); }
+    80%  { transform: translateY(-20px) scale(1.1); }
+    90%  { transform: translateY(-30px) scale(1.12); }
+    100% { transform: translateY(-20px) scale(1.1); }
+}
+
+@keyframes rataWinBounceFlip {
+    0%   { transform: scaleX(-1) translateY(-20px) scale(1.1); }
+    20%  { transform: scaleX(-1) translateY(-44px) scale(1.18); }
+    40%  { transform: scaleX(-1) translateY(-20px) scale(1.1); }
+    60%  { transform: scaleX(-1) translateY(-38px) scale(1.15); }
+    80%  { transform: scaleX(-1) translateY(-20px) scale(1.1); }
+    90%  { transform: scaleX(-1) translateY(-30px) scale(1.12); }
+    100% { transform: scaleX(-1) translateY(-20px) scale(1.1); }
+}
+
+.rata-char-box.anim-win-strong .rata-char-img {
+    animation: rataWinBounce 0.7s ease-in-out 3 forwards;
+    filter: brightness(1.3) drop-shadow(0 0 14px rgba(255, 215, 0, 0.9));
+}
+
+.rata-char-box.opponent-side.anim-win-strong .rata-char-img {
+    animation: rataWinBounceFlip 0.7s ease-in-out 3 forwards;
+    filter: brightness(1.3) drop-shadow(0 0 14px rgba(255, 215, 0, 0.9));
+}
+
 /* 敗北アニメーション */
 .rata-char-box.anim-lose .rata-char-img {
     transform: translateY(16px) scale(0.9);
@@ -3022,11 +3053,47 @@ section h3 {
 /* スキップ・結果ボタン */
 .rata-buttons {
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
 .rata-result-btn {
     min-width: 160px;
     font-size: 0.9rem;
+}
+
+.rata-skip-btn {
+    min-width: 120px;
+    font-size: 0.82rem;
+    background: #78909c;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 20px;
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+.rata-skip-btn:hover {
+    opacity: 1;
+    background: #546e7a;
+}
+
+/* 格上撃破メッセージ */
+.rata-upset-message {
+    font-size: 1.05rem;
+    font-weight: 900;
+    color: #f57f17;
+    text-shadow: 0 0 10px rgba(245, 127, 23, 0.5);
+    margin-bottom: 6px;
+    animation: upsetPulse 0.6s ease-in-out 2;
+}
+
+@keyframes upsetPulse {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.08); }
 }
 
 @media (max-width: 600px) {

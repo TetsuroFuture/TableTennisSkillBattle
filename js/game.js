@@ -835,6 +835,20 @@ function setupRatedBattleStartButtons() {
 let pendingRatedMatchResult = null;
 let ratedAnimationAborted = false;
 let ratedAnimationResultShown = false;
+let currentBattleAnimationMode = 'practice';
+
+const battleAnimationSettings = {
+    practice: { speedMultiplier: 1.0 },
+    rated:    { speedMultiplier: 2.0 }
+};
+
+const UPSET_RATE_DIFF = 100;
+const UPSET_MESSAGES = [
+    '格上撃破！大金星です！',
+    '強敵を打ち破った！',
+    'レート差を覆す見事な勝利！',
+    'この勝利は大きい！'
+];
 
 /**
  * バトルログ行から得点イベントを抽出して構造化データとして返す。
@@ -965,6 +979,7 @@ function showRatedBattleAnimation(result) {
     pendingRatedMatchResult = result;
     ratedAnimationAborted = false;
     ratedAnimationResultShown = false;
+    currentBattleAnimationMode = result.mode === 'rated' ? 'rated' : 'practice';
 
     const playerStyleName = player.style !== null ? styles[player.style].name : 'オールラウンド型';
     const opponentStyleName = styles[result.cpu.style].name;
@@ -981,15 +996,30 @@ function showRatedBattleAnimation(result) {
     setEl('rataPlayerScore', '0');
     setEl('rataOpponentScore', '0');
 
-    const playerDisplayRate = Number.isFinite(result.displayRateBefore)
-        ? result.displayRateBefore
-        : calculateEffectiveRate(player.rate, player.ratedMatches);
-    const opponentDisplayRate = Number.isFinite(selectedRatedOpponent?.displayRate)
-        ? selectedRatedOpponent.displayRate
-        : calculateEffectiveRate(result.cpu.rate || 1500, result.cpu.ratedMatches || 0);
-
-    setEl('rataPlayerRate', `Rate ${playerDisplayRate}`);
-    setEl('rataOpponentRate', `Rate ${opponentDisplayRate}`);
+    // モードに応じてヘッダータイトルとレート表示を切り替える
+    const titleEl = document.getElementById('rataModTitle');
+    const ratesRow = document.getElementById('rataMatchupRates');
+    if (currentBattleAnimationMode === 'rated') {
+        if (titleEl) {
+            titleEl.textContent = '全国Rate対戦';
+        }
+        if (ratesRow) {
+            ratesRow.style.display = '';
+        }
+        const playerDisplayRate = Number.isFinite(result.displayRateBefore)
+            ? result.displayRateBefore
+            : calculateEffectiveRate(player.rate, player.ratedMatches);
+        const opponentDisplayRate = calculateEffectiveRate(result.cpu.rate || 1500, result.cpu.ratedMatches || 0);
+        setEl('rataPlayerRate', `Rate ${playerDisplayRate}`);
+        setEl('rataOpponentRate', `Rate ${opponentDisplayRate}`);
+    } else {
+        if (titleEl) {
+            titleEl.textContent = 'CPU対戦';
+        }
+        if (ratesRow) {
+            ratesRow.style.display = 'none';
+        }
+    }
 
     // キャラクター画像を戦型に合わせてセットする
     const playerImgEl = document.getElementById('rata-player-img');
@@ -1006,7 +1036,7 @@ function showRatedBattleAnimation(result) {
     // アニメーションクラスをリセットする
     const rataPlayerChar = document.getElementById('rata-player-character');
     const rataOpponentChar = document.getElementById('rata-opponent-character');
-    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-win-strong', 'anim-lose'];
     if (rataPlayerChar) {
         rataPlayerChar.classList.remove(...animClasses);
     }
@@ -1019,14 +1049,26 @@ function showRatedBattleAnimation(result) {
         resultArea.style.display = 'none';
     }
 
+    const upsetMsg = document.getElementById('rataUpsetMessage');
+    if (upsetMsg) {
+        upsetMsg.style.display = 'none';
+        upsetMsg.textContent = '';
+    }
+
     const logText = document.getElementById('rataLogText');
     if (logText) {
-        logText.textContent = '全国Rate対戦 開始！';
+        logText.textContent = currentBattleAnimationMode === 'rated' ? '全国Rate対戦 開始！' : 'CPU対戦 開始！';
     }
 
     const resultBtn = document.getElementById('rataResultBtn');
     if (resultBtn) {
         resultBtn.style.display = 'none';
+    }
+
+    // CPU戦のみスキップボタンを表示する
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.style.display = currentBattleAnimationMode === 'rated' ? 'none' : '';
     }
 
     changeScreen('ratedBattleAnimation');
@@ -1065,7 +1107,8 @@ function _playRatedBattleAnimationSequence(result) {
 
         _playRataCharacterAnimation(event.pointWinner, event.animationType);
 
-        const scoreDelay = event.animationType === 'skill' ? 600 : 380;
+        const speedMult = (battleAnimationSettings[currentBattleAnimationMode] || battleAnimationSettings.practice).speedMultiplier;
+        const scoreDelay = (event.animationType === 'skill' ? 600 : 380) * speedMult;
         setTimeout(() => {
             if (ratedAnimationAborted) {
                 return;
@@ -1077,8 +1120,8 @@ function _playRatedBattleAnimationSequence(result) {
 
         // 最後のイベントは少し長めに表示する
         const isLast = index >= events.length;
-        const baseDuration = event.animationType === 'skill' ? 1400 : 1000;
-        const duration = isLast ? baseDuration + 500 : baseDuration;
+        const baseDuration = (event.animationType === 'skill' ? 1400 : 1000) * speedMult;
+        const duration = isLast ? baseDuration + 500 * speedMult : baseDuration;
         setTimeout(playNext, duration);
     }
 
@@ -1116,7 +1159,7 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
         return;
     }
 
-    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-win-strong', 'anim-lose'];
     playerChar.classList.remove(...animClasses);
     opponentChar.classList.remove(...animClasses);
 
@@ -1134,6 +1177,9 @@ function _playRataCharacterAnimation(pointWinner, animationType) {
     replaceRataImageState(loserImg, 'conceded');
 
     setTimeout(() => {
+        if (ratedAnimationAborted) {
+            return;
+        }
         playerChar.classList.remove(...animClasses);
         opponentChar.classList.remove(...animClasses);
         // 両者の画像を normal 状態に戻す
@@ -1161,6 +1207,21 @@ function _showRatedBattleResultSummary(result) {
         resultArea.style.display = '';
     }
 
+    // 格上撃破メッセージ（レート戦でプレイヤーが格上に勝利した場合）
+    const upsetMsg = document.getElementById('rataUpsetMessage');
+    if (upsetMsg) {
+        const isUpset = currentBattleAnimationMode === 'rated'
+            && result.isPlayerWin
+            && Number.isFinite(result.displayRateBefore)
+            && calculateEffectiveRate(result.cpu.rate || 1500, result.cpu.ratedMatches || 0) >= result.displayRateBefore + UPSET_RATE_DIFF;
+        if (isUpset) {
+            upsetMsg.textContent = UPSET_MESSAGES[Math.floor(Math.random() * UPSET_MESSAGES.length)];
+            upsetMsg.style.display = '';
+        } else {
+            upsetMsg.style.display = 'none';
+        }
+    }
+
     const resultText = document.getElementById('rataResultText');
     if (resultText) {
         resultText.textContent = result.isPlayerWin ? '🏆 WIN!' : '😤 LOSE...';
@@ -1182,22 +1243,30 @@ function _showRatedBattleResultSummary(result) {
     }
 
     // 勝敗キャラクターアニメーション・画像切り替え
+    // レート戦では勝者に強調ジャンプアニメーションを適用する
     const playerChar = document.getElementById('rata-player-character');
     const opponentChar = document.getElementById('rata-opponent-character');
     const playerImg = document.getElementById('rata-player-img');
     const opponentImg = document.getElementById('rata-opponent-img');
-    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-lose'];
+    const animClasses = ['anim-score', 'anim-skill', 'anim-lose-point', 'anim-win', 'anim-win-strong', 'anim-lose'];
+    const winClass = currentBattleAnimationMode === 'rated' ? 'anim-win-strong' : 'anim-win';
     if (playerChar) {
         playerChar.classList.remove(...animClasses);
-        playerChar.classList.add(result.isPlayerWin ? 'anim-win' : 'anim-lose');
+        playerChar.classList.add(result.isPlayerWin ? winClass : 'anim-lose');
     }
     if (opponentChar) {
         opponentChar.classList.remove(...animClasses);
-        opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : 'anim-win');
+        opponentChar.classList.add(result.isPlayerWin ? 'anim-lose' : winClass);
     }
     // 勝敗画像へ切り替える
     replaceRataImageState(playerImg, result.isPlayerWin ? 'win' : 'lose');
     replaceRataImageState(opponentImg, result.isPlayerWin ? 'lose' : 'win');
+
+    // スキップボタンを隠し、結果ボタンを表示する
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.style.display = 'none';
+    }
 
     const resultBtn = document.getElementById('rataResultBtn');
     if (resultBtn) {
@@ -1217,6 +1286,15 @@ function setupRatedBattleAnimationButtons() {
     const resultBtn = document.getElementById('rataResultBtn');
     if (resultBtn) {
         resultBtn.addEventListener('click', () => {
+            _onRatedAnimationAllDone();
+        });
+    }
+
+    const skipBtn = document.getElementById('rataSkipBtn');
+    if (skipBtn) {
+        skipBtn.addEventListener('click', () => {
+            ratedAnimationAborted = true;
+            skipBtn.style.display = 'none';
             _onRatedAnimationAllDone();
         });
     }
@@ -4529,7 +4607,7 @@ function setupConfirmStartBattleButton() {
             tacticId: selectedTacticId,
             enemy: cpu || undefined
         });
-        applyMatchResult(result);
+        showRatedBattleAnimation(result);
     });
 }
 
