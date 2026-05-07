@@ -446,13 +446,13 @@
 
             <section class="rated-anim-section">
                 <div class="rata-header">
-                    <h2>全国Rate対戦</h2>
+                    <h2 id="rataModTitle">全国Rate対戦</h2>
                     <div class="rata-matchup-names">
                         <span class="rata-player-name" id="rataPlayerName">-</span>
                         <span class="rata-vs">vs</span>
                         <span class="rata-opponent-name" id="rataOpponentName">-</span>
                     </div>
-                    <div class="rata-matchup-rates">
+                    <div class="rata-matchup-rates" id="rataMatchupRates">
                         <span id="rataPlayerRate">-</span>
                         <span></span>
                         <span id="rataOpponentRate">-</span>
@@ -489,12 +489,14 @@
                 </div>
 
                 <div class="rata-result-area" id="rataResultArea" style="display:none;">
+                    <div class="rata-upset-message" id="rataUpsetMessage" style="display:none;"></div>
                     <div class="rata-result-text" id="rataResultText"></div>
                     <div class="rata-final-score" id="rataFinalScore"></div>
                     <div class="rata-rate-change" id="rataRateChange"></div>
                 </div>
 
                 <div class="rata-buttons">
+                    <button class="battle-btn rata-skip-btn" id="rataSkipBtn" style="display:none;">スキップ</button>
                     <button class="battle-btn rata-result-btn" id="rataResultBtn" style="display:none;">結果を見る</button>
                 </div>
             </section>
