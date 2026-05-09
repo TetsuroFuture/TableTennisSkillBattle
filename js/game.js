@@ -6,6 +6,7 @@
 const LOCAL_PLAYER_ID_KEY = 'ttsb_player_id';
 const LOCAL_SETUP_COMPLETE_KEY = 'ttsb_setup_complete';
 const LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY = 'rateMatchCandidatesCache';
+const MAX_CHARACTERS = 3;
 
 // ============================================================
 // バランス調整定数
@@ -500,7 +501,14 @@ async function renderRecentRatedBattleList(playerId) {
             recentMatches.push(doc.data());
         });
 
-        const latestFiveMatches = recentMatches
+        // アクティブ選手のRate戦履歴のみ表示する（characterIdが一致するもの、または旧形式で characterId がないもの）
+        const activeChar = getActiveCharacter();
+        const activeCharId = activeChar ? activeChar.id : null;
+        const filteredMatches = activeCharId
+            ? recentMatches.filter(d => !d.characterId || d.characterId === activeCharId)
+            : recentMatches;
+
+        const latestFiveMatches = filteredMatches
             .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
             .slice(0, 5);
 
@@ -581,7 +589,9 @@ async function findRatedOpponent() {
             return createCpuOpponentForRated(playerDisplayRate);
         }
 
-        const withoutSelf = candidates.filter(c => c.id !== playerId);
+        // 自分のplayerIdに紐づく選手は除外する（matchableCharacterはplayerIdフィールドで識別）
+        // fetchRateMatchCandidatesでも除外しているが、キャッシュを使う場合を考慮して二重チェックする
+        const withoutSelf = candidates.filter(c => c.playerId !== playerId);
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
         }
@@ -604,7 +614,9 @@ function normalizeRateMatchCandidate(raw) {
         ? raw.displayRate
         : calculateEffectiveRate(rate, ratedMatches);
     return {
-        id: raw.id,
+        id: raw.id,                         // matchableCharacterId ({playerId}_{characterId})
+        playerId: raw.playerId || null,      // 対戦候補の所有者playerId（自己除外に使用）
+        characterId: raw.characterId || null, // 選手ごとの固有ID
         name: raw.name || '匿名選手',
         style: Number.isFinite(raw.style) ? raw.style : 0,
         rate,
@@ -709,28 +721,26 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
         const range = RATE_MATCH_RANGE_STEPS[i];
         const rateMin = Math.max(100, playerDisplayRate - range);
         const rateMax = playerDisplayRate + range + MAX_PROVISIONAL_PENALTY;
-        const snapshot = await db.collection('players')
-            .where('rate', '>=', rateMin)
-            .where('rate', '<=', rateMax)
+        const snapshot = await db.collection('matchableCharacters')
+            .where('displayRate', '>=', rateMin)
+            .where('displayRate', '<=', rateMax)
             .limit(MAX_OPPONENT_FETCH_SIZE)
             .get();
 
         snapshot.forEach(doc => {
-            if (doc.id === playerId || candidateIds.has(doc.id)) {
+            const data = doc.data();
+            if (data.playerId === playerId || candidateIds.has(doc.id)) {
                 return;
             }
-            const data = doc.data();
-            const oppDisplayRate = calculateEffectiveRate(
-                Number.isFinite(data.rate) ? data.rate : 1500,
-                Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
-            );
             candidates.push({
                 id: doc.id,
+                playerId: data.playerId,
+                characterId: data.characterId,
                 name: data.name || '匿名選手',
                 style: Number.isFinite(data.style) ? data.style : 0,
                 rate: Number.isFinite(data.rate) ? data.rate : 1500,
                 ratedMatches: Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0,
-                displayRate: oppDisplayRate,
+                displayRate: Number.isFinite(data.displayRate) ? data.displayRate : 1500,
                 atk: Number.isFinite(data.atk) ? data.atk : 10,
                 def: Number.isFinite(data.def) ? data.def : 10,
                 spd: Number.isFinite(data.spd) ? data.spd : 10,
@@ -1811,6 +1821,11 @@ function normalizePlayerData(data, playerId) {
         normalized.level = 1;
     }
 
+    normalized.activeCharacterIndex = Number.isFinite(data?.activeCharacterIndex) ? data.activeCharacterIndex : 0;
+    normalized.characters = Array.isArray(data?.characters)
+        ? data.characters.map(c => normalizeCharacterData(c)).filter(Boolean)
+        : [];
+
     return normalized;
 }
 
@@ -1850,6 +1865,34 @@ function mapPlayerToFirestoreData(targetPlayer, playerId) {
         ratedDraws: Number.isFinite(targetPlayer.ratedDraws) ? targetPlayer.ratedDraws : 0,
         lastRatedBattleAt: targetPlayer.lastRatedBattleAt ?? null,
         initialSetupCompleted: targetPlayer.initialSetupCompleted === true,
+        activeCharacterIndex: Number.isFinite(targetPlayer.activeCharacterIndex) ? targetPlayer.activeCharacterIndex : 0,
+        characters: Array.isArray(targetPlayer.characters) ? targetPlayer.characters.map(c => ({
+            id: c.id || generateCharacterId(),
+            name: c.name || '新人選手',
+            style: Number.isFinite(c.style) ? c.style : null,
+            atk: Number.isFinite(c.atk) ? c.atk : 10,
+            def: Number.isFinite(c.def) ? c.def : 10,
+            spd: Number.isFinite(c.spd) ? c.spd : 10,
+            tec: Number.isFinite(c.tec) ? c.tec : 10,
+            sta: Number.isFinite(c.sta) ? c.sta : 10,
+            level: Number.isFinite(c.level) ? c.level : 1,
+            exp: Number.isFinite(c.exp) ? c.exp : 0,
+            usableExp: Number.isFinite(c.usableExp) ? c.usableExp : 0,
+            skills: Array.isArray(c.skills) ? c.skills : [],
+            equippedSkills: Array.isArray(c.equippedSkills) ? c.equippedSkills : [],
+            wins: Number.isFinite(c.wins) ? c.wins : 0,
+            losses: Number.isFinite(c.losses) ? c.losses : 0,
+            rate: Number.isFinite(c.rate) ? c.rate : 1500,
+            maxRate: Number.isFinite(c.maxRate) ? c.maxRate : 1500,
+            ratedMatches: Number.isFinite(c.ratedMatches) ? c.ratedMatches : 0,
+            ratedWins: Number.isFinite(c.ratedWins) ? c.ratedWins : 0,
+            ratedLosses: Number.isFinite(c.ratedLosses) ? c.ratedLosses : 0,
+            ratedDraws: Number.isFinite(c.ratedDraws) ? c.ratedDraws : 0,
+            lastRatedBattleAt: c.lastRatedBattleAt ?? null,
+            initialSetupCompleted: c.initialSetupCompleted === true,
+            createdAt: Number.isFinite(c.createdAt) ? c.createdAt : Date.now(),
+            updatedAt: Date.now()
+        })) : [],
         updatedAt: nowTimestamp
     };
 }
@@ -1877,9 +1920,14 @@ function applyPlayerDataToRuntime(data) {
     player.ratedDraws = data.ratedDraws;
     player.lastRatedBattleAt = data.lastRatedBattleAt;
     player.initialSetupCompleted = data.initialSetupCompleted;
-    cleanupEquippedSkills(player);
-    // プレリリース版では全スキル解放のため、ロード後に全スキルを付与する。
-    unlockAllSkills(player);
+    player.activeCharacterIndex = Number.isFinite(data.activeCharacterIndex) ? data.activeCharacterIndex : 0;
+    player.characters = Array.isArray(data.characters) ? data.characters : [];
+    if (player.characters.length > 0) {
+        syncActiveCharacterToPlayer();
+    } else {
+        cleanupEquippedSkills(player);
+        unlockAllSkills(player);
+    }
     // ロード直後は「保存済み」と見なしてスナップショットを記録する
     lastSavedPlayerData = clonePlayerSnapshot(player);
 }
@@ -1891,12 +1939,21 @@ function hasPlayerDataChanged(before, after) {
         'name', 'style', 'atk', 'def', 'spd', 'tec', 'sta',
         'exp', 'usableExp', 'level', 'wins', 'losses',
         'skills', 'equippedSkills',
-        'rate', 'ratedMatches', 'ratedWins', 'ratedLosses', 'ratedDraws', 'maxRate'
+        'rate', 'ratedMatches', 'ratedWins', 'ratedLosses', 'ratedDraws', 'maxRate',
+        'activeCharacterIndex'
     ];
     for (const field of fields) {
         if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
             return true;
         }
+    }
+    // characters配列の変更を検出する（選手数の増減）
+    // before.characterCount はclonePlayerSnapshotで設定されたスナップショット値、
+    // after.characters.length は現在のlive playerオブジェクトから計算する（after.characterCountは存在しない）。
+    const beforeCharCount = Number.isFinite(before.characterCount) ? before.characterCount : 0;
+    const afterCharCount = Array.isArray(after.characters) ? after.characters.length : 0;
+    if (beforeCharCount !== afterCharCount) {
+        return true;
     }
     return false;
 }
@@ -1926,7 +1983,9 @@ function clonePlayerSnapshot(targetPlayer) {
         ratedWins: targetPlayer.ratedWins,
         ratedLosses: targetPlayer.ratedLosses,
         ratedDraws: targetPlayer.ratedDraws,
-        maxRate: targetPlayer.maxRate
+        maxRate: targetPlayer.maxRate,
+        activeCharacterIndex: targetPlayer.activeCharacterIndex || 0,
+        characterCount: Array.isArray(targetPlayer.characters) ? targetPlayer.characters.length : 0
     };
 }
 
@@ -1949,6 +2008,9 @@ async function savePlayerData(saveLabel = '保存中...') {
 
     try {
         const docRef = db.collection('players').doc(currentPlayerId);
+        // 保存前にアクティブ選手のデータをcharacters配列に同期する。
+        // 既存処理はtopレベルのplayerフィールドを更新するため、保存前にcharactersへ反映が必要。
+        syncPlayerToActiveCharacter();
         const saveData = mapPlayerToFirestoreData(player, currentPlayerId);
 
         await docRef.set(saveData, { merge: true });
@@ -1958,6 +2020,15 @@ async function savePlayerData(saveLabel = '保存中...') {
         lastSavedPlayerData = clonePlayerSnapshot(player);
 
         updateSaveStatus(`保存完了 (${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })})`);
+
+        // matchableCharactersを更新する
+        const activeChar = getActiveCharacter();
+        if (activeChar) {
+            updateMatchableCharacter(currentPlayerId, activeChar).catch(err => {
+                console.error('matchableCharacters更新失敗:', err);
+            });
+        }
+
         return true;
     } catch (error) {
         updateSaveStatus('保存失敗: オフラインモード継続');
@@ -2031,8 +2102,14 @@ async function saveMatchResult(matchResult) {
         // バトルログはFirestoreに保存しない（書き込み量削減のため）。
         // ログはメモリ上（battleLines）に保持され、バトル結果画面の表示には引き続き利用される。
         // Firestoreには最小限のサマリーのみ保存する。
+        const activeChar = getActiveCharacter();
         await db.collection('matches').add({
             playerId: currentPlayerId,
+            characterId: activeChar ? activeChar.id : null,
+            characterName: activeChar ? activeChar.name : player.name,
+            characterStyle: activeChar
+                ? (Number.isFinite(activeChar.style) ? activeChar.style : null)
+                : (Number.isFinite(player.style) ? player.style : null),
             playerName: player.name,
             playerStyle: matchResult.playerStyle,
             enemyName: matchResult.enemyName || null,
@@ -2078,6 +2155,21 @@ async function loadOrCreatePlayerData() {
             applyPlayerDataToRuntime(loaded);
             updateSaveStatus('データ読込完了');
             addLog('Firestoreからプレイヤーデータを読み込みました。', 'success');
+
+            // 互換処理: charactersがない既存プレイヤーのデータを移行する
+            if (!Array.isArray(player.characters) || player.characters.length === 0) {
+                const char0 = createCharacterFromPlayer(player);
+                player.characters = [char0];
+                player.activeCharacterIndex = 0;
+                addLog('既存の選手データをキャラクター形式に変換しました。', 'info');
+                await updateMatchableCharacter(currentPlayerId, char0);
+                await savePlayerData('互換データ移行中...');
+            } else {
+                const activeChar = getActiveCharacter();
+                if (activeChar) {
+                    await updateMatchableCharacter(currentPlayerId, activeChar);
+                }
+            }
             return;
         }
 
@@ -2099,6 +2191,257 @@ async function loadOrCreatePlayerData() {
         console.error('Failed to load/create player data', error);
         addLog('Firestoreの読み込みに失敗したため、ローカル進行で続行します。', 'warning');
     }
+}
+
+// ============================================================
+// 複数選手管理
+// ============================================================
+
+function generateCharacterId() {
+    return `char_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+}
+
+function generateMatchableCharacterId(playerId, characterId) {
+    return `${playerId}_${characterId}`;
+}
+
+function normalizeCharacterData(data) {
+    if (!data || typeof data !== 'object') return null;
+    const exp = Number.isFinite(data.exp) ? data.exp : 0;
+    const usableExp = Number.isFinite(data.usableExp) ? data.usableExp : 0;
+    return {
+        id: data.id || generateCharacterId(),
+        name: data.name || '新人選手',
+        style: Number.isFinite(data.style) ? data.style : null,
+        atk: Number.isFinite(data.atk) ? data.atk : 10,
+        def: Number.isFinite(data.def) ? data.def : 10,
+        spd: Number.isFinite(data.spd) ? data.spd : 10,
+        tec: Number.isFinite(data.tec) ? data.tec : 10,
+        sta: Number.isFinite(data.sta) ? data.sta : 10,
+        level: Number.isFinite(data.level) ? Math.max(1, data.level) : 1,
+        exp,
+        usableExp,
+        skills: Array.isArray(data.skills) ? data.skills : [],
+        equippedSkills: Array.isArray(data.equippedSkills) ? data.equippedSkills : [],
+        wins: Number.isFinite(data.wins) ? data.wins : 0,
+        losses: Number.isFinite(data.losses) ? data.losses : 0,
+        rate: Number.isFinite(data.rate) ? data.rate : 1500,
+        maxRate: Number.isFinite(data.maxRate) ? data.maxRate : 1500,
+        ratedMatches: Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0,
+        ratedWins: Number.isFinite(data.ratedWins) ? data.ratedWins : 0,
+        ratedLosses: Number.isFinite(data.ratedLosses) ? data.ratedLosses : 0,
+        ratedDraws: Number.isFinite(data.ratedDraws) ? data.ratedDraws : 0,
+        lastRatedBattleAt: data.lastRatedBattleAt ?? null,
+        initialSetupCompleted: data.initialSetupCompleted === true,
+        createdAt: Number.isFinite(data.createdAt) ? data.createdAt : Date.now(),
+        updatedAt: Number.isFinite(data.updatedAt) ? data.updatedAt : Date.now()
+    };
+}
+
+function createCharacterFromPlayer(targetPlayer) {
+    return {
+        id: generateCharacterId(),
+        name: targetPlayer.name || '新人選手',
+        style: targetPlayer.style,
+        atk: targetPlayer.atk || 10,
+        def: targetPlayer.def || 10,
+        spd: targetPlayer.spd || 10,
+        tec: targetPlayer.tec || 10,
+        sta: targetPlayer.sta || 10,
+        level: targetPlayer.level || 1,
+        exp: targetPlayer.exp || 0,
+        usableExp: targetPlayer.usableExp || 0,
+        skills: Array.isArray(targetPlayer.skills) ? [...targetPlayer.skills] : [],
+        equippedSkills: Array.isArray(targetPlayer.equippedSkills) ? [...targetPlayer.equippedSkills] : [],
+        wins: targetPlayer.wins || 0,
+        losses: targetPlayer.losses || 0,
+        rate: targetPlayer.rate || 1500,
+        maxRate: targetPlayer.maxRate || 1500,
+        ratedMatches: targetPlayer.ratedMatches || 0,
+        ratedWins: targetPlayer.ratedWins || 0,
+        ratedLosses: targetPlayer.ratedLosses || 0,
+        ratedDraws: targetPlayer.ratedDraws || 0,
+        lastRatedBattleAt: targetPlayer.lastRatedBattleAt ?? null,
+        initialSetupCompleted: targetPlayer.initialSetupCompleted === true,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+    };
+}
+
+function createNewCharacterData(name, styleIndex) {
+    return {
+        id: generateCharacterId(),
+        name: name || '新人選手',
+        style: styleIndex,
+        atk: 10,
+        def: 10,
+        spd: 10,
+        tec: 10,
+        sta: 10,
+        level: 1,
+        exp: 0,
+        usableExp: 0,
+        skills: [],
+        equippedSkills: [],
+        wins: 0,
+        losses: 0,
+        rate: 1500,
+        maxRate: 1500,
+        ratedMatches: 0,
+        ratedWins: 0,
+        ratedLosses: 0,
+        ratedDraws: 0,
+        lastRatedBattleAt: null,
+        initialSetupCompleted: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+    };
+}
+
+function getActiveCharacter() {
+    if (!Array.isArray(player.characters) || player.characters.length === 0) {
+        return null;
+    }
+    const idx = Number.isFinite(player.activeCharacterIndex) ? player.activeCharacterIndex : 0;
+    return player.characters[Math.min(idx, player.characters.length - 1)] || null;
+}
+
+function syncPlayerToActiveCharacter() {
+    const idx = Number.isFinite(player.activeCharacterIndex) ? player.activeCharacterIndex : 0;
+    if (!Array.isArray(player.characters) || player.characters.length === 0) {
+        return;
+    }
+    const char = player.characters[idx];
+    if (!char) return;
+    char.name = player.name;
+    char.style = player.style;
+    char.atk = player.atk;
+    char.def = player.def;
+    char.spd = player.spd;
+    char.tec = player.tec;
+    char.sta = player.sta;
+    char.level = player.level;
+    char.exp = player.exp;
+    char.usableExp = player.usableExp;
+    char.skills = Array.isArray(player.skills) ? [...player.skills] : [];
+    char.equippedSkills = Array.isArray(player.equippedSkills) ? [...player.equippedSkills] : [];
+    char.wins = player.wins;
+    char.losses = player.losses;
+    char.rate = player.rate;
+    char.maxRate = player.maxRate;
+    char.ratedMatches = player.ratedMatches;
+    char.ratedWins = player.ratedWins;
+    char.ratedLosses = player.ratedLosses;
+    char.ratedDraws = player.ratedDraws;
+    char.lastRatedBattleAt = player.lastRatedBattleAt;
+    char.initialSetupCompleted = player.initialSetupCompleted;
+    char.updatedAt = Date.now();
+}
+
+function syncActiveCharacterToPlayer() {
+    const char = getActiveCharacter();
+    if (!char) return;
+    player.name = char.name;
+    player.style = char.style;
+    player.atk = char.atk;
+    player.def = char.def;
+    player.spd = char.spd;
+    player.tec = char.tec;
+    player.sta = char.sta;
+    player.level = char.level;
+    player.exp = char.exp;
+    player.usableExp = char.usableExp;
+    player.skills = Array.isArray(char.skills) ? [...char.skills] : [];
+    player.equippedSkills = Array.isArray(char.equippedSkills) ? [...char.equippedSkills] : [];
+    player.wins = char.wins;
+    player.losses = char.losses;
+    player.rate = char.rate;
+    player.maxRate = char.maxRate;
+    player.ratedMatches = char.ratedMatches;
+    player.ratedWins = char.ratedWins;
+    player.ratedLosses = char.ratedLosses;
+    player.ratedDraws = char.ratedDraws;
+    player.lastRatedBattleAt = char.lastRatedBattleAt;
+    player.initialSetupCompleted = char.initialSetupCompleted;
+    unlockAllSkills(player);
+    cleanupEquippedSkills(player);
+}
+
+async function updateMatchableCharacter(playerId, character) {
+    if (!isFirebaseReady || !db || !playerId || !character) return;
+    try {
+        const docId = generateMatchableCharacterId(playerId, character.id);
+        const displayRate = calculateEffectiveRate(
+            Number.isFinite(character.rate) ? character.rate : 1500,
+            Number.isFinite(character.ratedMatches) ? character.ratedMatches : 0
+        );
+        await db.collection('matchableCharacters').doc(docId).set({
+            id: docId,
+            playerId,
+            characterId: character.id,
+            name: character.name || '新人選手',
+            style: Number.isFinite(character.style) ? character.style : null,
+            atk: Number.isFinite(character.atk) ? character.atk : 10,
+            def: Number.isFinite(character.def) ? character.def : 10,
+            spd: Number.isFinite(character.spd) ? character.spd : 10,
+            tec: Number.isFinite(character.tec) ? character.tec : 10,
+            sta: Number.isFinite(character.sta) ? character.sta : 10,
+            level: Number.isFinite(character.level) ? character.level : 1,
+            rate: Number.isFinite(character.rate) ? character.rate : 1500,
+            ratedMatches: Number.isFinite(character.ratedMatches) ? character.ratedMatches : 0,
+            ratedWins: Number.isFinite(character.ratedWins) ? character.ratedWins : 0,
+            ratedLosses: Number.isFinite(character.ratedLosses) ? character.ratedLosses : 0,
+            ratedDraws: Number.isFinite(character.ratedDraws) ? character.ratedDraws : 0,
+            displayRate,
+            equippedSkills: Array.isArray(character.equippedSkills) ? character.equippedSkills : [],
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+    } catch (err) {
+        console.error('matchableCharacters更新失敗:', err);
+    }
+}
+
+async function switchCharacter(newIndex) {
+    if (!Array.isArray(player.characters) || newIndex < 0 || newIndex >= player.characters.length) {
+        addLog('指定された選手が存在しません。', 'warning');
+        return;
+    }
+    syncPlayerToActiveCharacter();
+    player.activeCharacterIndex = newIndex;
+    syncActiveCharacterToPlayer();
+    renderAll();
+    renderHomeCharacterSection();
+    await savePlayerData('選手切替中...');
+}
+
+async function createNewCharacter(name, styleIndex) {
+    if (!Array.isArray(player.characters)) {
+        player.characters = [];
+    }
+    if (player.characters.length >= MAX_CHARACTERS) {
+        addLog(`選手は最大${MAX_CHARACTERS}人まで登録できます。`, 'warning');
+        return false;
+    }
+    const newChar = createNewCharacterData(name, styleIndex);
+    // 初期スキルを1枚付与する。全スキル解放はsyncActiveCharacterToPlayer内のunlockAllSkillsで行われる。
+    const unownedSkills = skillCards.filter(s => !newChar.skills.includes(s.id));
+    if (unownedSkills.length > 0) {
+        const randomSkill = unownedSkills[Math.floor(Math.random() * unownedSkills.length)];
+        newChar.skills.push(randomSkill.id);
+    }
+    player.characters.push(newChar);
+    player.activeCharacterIndex = player.characters.length - 1;
+    syncActiveCharacterToPlayer();
+    renderAll();
+    renderHomeCharacterSection();
+    if (currentPlayerId) {
+        await updateMatchableCharacter(currentPlayerId, newChar);
+    }
+    await savePlayerData('新選手登録中...');
+    const styleName = (Number.isFinite(styleIndex) && styleIndex >= 0 && styleIndex < styles.length)
+        ? styles[styleIndex].name : '不明';
+    addLog(`新しい選手「${name}」(${styleName})を登録しました！`, 'success');
+    return true;
 }
 
 // ゲーム状態管理 - プレイヤーオブジェクト
@@ -2124,7 +2467,9 @@ const player = {
     ratedLosses: 0,
     ratedDraws: 0,
     lastRatedBattleAt: null,
-    initialSetupCompleted: false  // 初期設定完了フラグ
+    initialSetupCompleted: false,  // 初期設定完了フラグ
+    characters: [],           // 複数選手データ
+    activeCharacterIndex: 0   // アクティブ選手インデックス
 };
 
 // 戦型データ - 9種類 + 各説明
@@ -3393,6 +3738,7 @@ function updateStyleInfo() {
 
 function renderHomeScreen() {
     renderLevelEquipSlotInfo('home', player);
+    renderHomeCharacterSection();
 }
 
 function renderLevelEquipSlotInfo(prefix, targetPlayer) {
@@ -5703,6 +6049,263 @@ function setupLogoutButton() {
 }
 
 // ============================================================
+// 複数選手管理 UI
+// ============================================================
+
+function renderHomeCharacterSection() {
+    const section = document.getElementById('homeCharacterSection');
+    if (!section) return;
+
+    const char = getActiveCharacter();
+    if (!char) return;
+
+    const nameEl = document.getElementById('homeCharacterName');
+    const styleEl = document.getElementById('homeCharacterStyle');
+    const levelEl = document.getElementById('homeCharacterLevel');
+    const rateEl = document.getElementById('homeCharacterRate');
+    const addBtn = document.getElementById('addCharacterBtn');
+
+    if (nameEl) nameEl.textContent = char.name || '-';
+    if (styleEl) {
+        const styleValid = Number.isFinite(char.style) && char.style >= 0 && char.style < styles.length;
+        styleEl.textContent = styleValid ? styles[char.style].name : '未選択';
+    }
+    if (levelEl) levelEl.textContent = `Lv ${char.level || 1}`;
+    if (rateEl) {
+        const displayRate = calculateEffectiveRate(
+            Number.isFinite(char.rate) ? char.rate : 1500,
+            Number.isFinite(char.ratedMatches) ? char.ratedMatches : 0
+        );
+        rateEl.textContent = `Rate ${displayRate}`;
+    }
+    if (addBtn) {
+        const charCount = Array.isArray(player.characters) ? player.characters.length : 0;
+        addBtn.disabled = charCount >= MAX_CHARACTERS;
+    }
+}
+
+function renderCharacterList() {
+    const container = document.getElementById('characterList');
+    if (!container) return;
+
+    const chars = Array.isArray(player.characters) ? player.characters : [];
+    if (chars.length === 0) {
+        container.innerHTML = '<div class="character-list-empty">選手がいません</div>';
+        return;
+    }
+
+    container.innerHTML = chars.map((char, idx) => {
+        const isActive = idx === player.activeCharacterIndex;
+        const styleValid = Number.isFinite(char.style) && char.style >= 0 && char.style < styles.length;
+        const styleName = styleValid ? styles[char.style].name : '未選択';
+        const displayRate = calculateEffectiveRate(
+            Number.isFinite(char.rate) ? char.rate : 1500,
+            Number.isFinite(char.ratedMatches) ? char.ratedMatches : 0
+        );
+        const record = `${char.wins || 0}勝 ${char.losses || 0}敗 ${char.ratedDraws || 0}分`;
+        const statLine = `ATK:${char.atk||10} DEF:${char.def||10} SPD:${char.spd||10} TEC:${char.tec||10} STA:${char.sta||10}`;
+        const imgSrc = styleValid ? getRataCharacterImageSrc(styles[char.style].name, 'normal') : '';
+
+        return `
+            <div class="character-card ${isActive ? 'character-card-active' : ''}">
+                ${isActive ? '<span class="character-active-badge">使用中</span>' : ''}
+                <div class="character-card-header">
+                    ${imgSrc ? `<img class="style-mini-icon" src="${imgSrc}" alt="">` : ''}
+                    <div class="character-card-info">
+                        <div class="character-card-name">${char.name || '新人選手'}</div>
+                        <div class="character-card-style">${styleName}</div>
+                    </div>
+                </div>
+                <div class="character-card-stats">
+                    <span>Lv ${char.level || 1}</span>
+                    <span class="char-sep">|</span>
+                    <span>Rate ${displayRate}</span>
+                </div>
+                <div class="character-card-record">${record} (Rate戦: ${char.ratedMatches || 0}試合)</div>
+                <div class="character-card-statline">${statLine}</div>
+                ${isActive
+                    ? '<div class="character-in-use">現在使用中の選手</div>'
+                    : `<button class="character-select-btn" onclick="handleSwitchCharacter(${idx})">この選手でプレイ</button>`
+                }
+            </div>
+        `;
+    }).join('');
+}
+
+function showCharacterListModal() {
+    const modal = document.getElementById('characterListModal');
+    if (modal) {
+        renderCharacterList();
+        modal.style.display = 'flex';
+    }
+}
+
+function hideCharacterListModal() {
+    const modal = document.getElementById('characterListModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+async function handleSwitchCharacter(idx) {
+    hideCharacterListModal();
+    await switchCharacter(idx);
+}
+
+function showNewCharacterOverlay() {
+    const overlay = document.getElementById('newCharacterOverlay');
+    if (!overlay) return;
+    const step1 = document.getElementById('newCharStep1');
+    const step2 = document.getElementById('newCharStep2');
+    const nameInput = document.getElementById('newCharNameInput');
+    const nameError = document.getElementById('newCharNameError');
+    const confirmBtn = document.getElementById('newCharConfirmBtn');
+    if (step1) step1.style.display = 'block';
+    if (step2) step2.style.display = 'none';
+    if (nameInput) nameInput.value = '';
+    if (nameError) nameError.style.display = 'none';
+    if (confirmBtn) confirmBtn.disabled = true;
+    overlay.style.display = 'flex';
+    renderNewCharStyleList();
+}
+
+function hideNewCharacterOverlay() {
+    const overlay = document.getElementById('newCharacterOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function renderNewCharStyleList() {
+    const container = document.getElementById('newCharStyleList');
+    if (!container) return;
+
+    const categories = ['攻撃系', 'カウンター系', '守備系'];
+    container.innerHTML = categories.map(cat => {
+        const catStyles = styles.filter(s => s.category === cat);
+        return `
+            <div class="setup-style-category">
+                <h4 class="setup-style-cat-label">${cat}</h4>
+                <div class="setup-style-buttons">
+                    ${catStyles.map(style => `
+                        <button class="setup-style-btn new-char-style-btn" data-style="${style.id}">
+                            <img class="style-mini-icon" src="${getRataCharacterImageSrc(style.name, 'normal')}" alt="">
+                            <span class="style-btn-name">${style.name}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.new-char-style-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            container.querySelectorAll('.new-char-style-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const styleId = parseInt(this.dataset.style, 10);
+            const selectedStyle = Number.isFinite(styleId) && styleId >= 0 && styleId < styles.length
+                ? styles[styleId]
+                : null;
+            if (!selectedStyle) return;
+            const infoEl = document.getElementById('newCharSelectedStyleInfo');
+            if (infoEl && selectedStyle) {
+                infoEl.innerHTML = `<p><strong>${selectedStyle.name}</strong><br><small>${selectedStyle.description}</small></p>`;
+            }
+            const confirmBtn = document.getElementById('newCharConfirmBtn');
+            if (confirmBtn) confirmBtn.disabled = false;
+        });
+    });
+}
+
+function setupCharacterUI() {
+    const switchBtn = document.getElementById('switchCharacterBtn');
+    if (switchBtn) {
+        switchBtn.addEventListener('click', showCharacterListModal);
+    }
+
+    const addBtn = document.getElementById('addCharacterBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', function() {
+            const charCount = Array.isArray(player.characters) ? player.characters.length : 0;
+            if (charCount >= MAX_CHARACTERS) {
+                addLog(`選手は最大${MAX_CHARACTERS}人まで登録できます。`, 'warning');
+                return;
+            }
+            showNewCharacterOverlay();
+        });
+    }
+
+    const closeCharListBtn = document.getElementById('closeCharacterListBtn');
+    if (closeCharListBtn) {
+        closeCharListBtn.addEventListener('click', hideCharacterListModal);
+    }
+
+    const charListModal = document.getElementById('characterListModal');
+    if (charListModal) {
+        charListModal.addEventListener('click', function(e) {
+            if (e.target === charListModal) hideCharacterListModal();
+        });
+    }
+
+    const step1NextBtn = document.getElementById('newCharStep1NextBtn');
+    if (step1NextBtn) {
+        step1NextBtn.addEventListener('click', function() {
+            const nameInput = document.getElementById('newCharNameInput');
+            const nameError = document.getElementById('newCharNameError');
+            const result = validatePlayerName(nameInput ? nameInput.value : '');
+            if (!result.valid) {
+                if (nameInput) {
+                    nameInput.focus();
+                    nameInput.classList.add('setup-input-error');
+                }
+                if (nameError) {
+                    nameError.textContent = result.message || 'この選手名は使用できません';
+                    nameError.style.display = 'block';
+                }
+                return;
+            }
+            if (nameInput) nameInput.classList.remove('setup-input-error');
+            if (nameError) nameError.style.display = 'none';
+            const step1 = document.getElementById('newCharStep1');
+            const step2 = document.getElementById('newCharStep2');
+            if (step1) step1.style.display = 'none';
+            if (step2) step2.style.display = 'block';
+        });
+    }
+
+    const cancelBtn = document.getElementById('newCharCancelBtn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hideNewCharacterOverlay);
+    }
+
+    const backBtn = document.getElementById('newCharBackBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            const step1 = document.getElementById('newCharStep1');
+            const step2 = document.getElementById('newCharStep2');
+            if (step1) step1.style.display = 'block';
+            if (step2) step2.style.display = 'none';
+        });
+    }
+
+    const confirmBtn = document.getElementById('newCharConfirmBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', async function() {
+            const nameInput = document.getElementById('newCharNameInput');
+            const result = validatePlayerName(nameInput ? nameInput.value : '');
+            if (!result.valid) return;
+            const activeStyleBtn = document.querySelector('.new-char-style-btn.active');
+            if (!activeStyleBtn) {
+                addLog('戦型を選択してください。', 'warning');
+                return;
+            }
+            const styleIndex = parseInt(activeStyleBtn.dataset.style, 10);
+            confirmBtn.disabled = true;
+            hideNewCharacterOverlay();
+            await createNewCharacter(result.name, styleIndex);
+        });
+    }
+}
+
+// ============================================================
 // ゲーム初期化
 // ============================================================
 
@@ -5738,6 +6341,7 @@ async function initGame() {
     setupChangePasswordModal();
     setupLogoutButton();
     setupNavButtons();
+    setupCharacterUI();
     setupStartButton();
     changeScreen('home');
 
