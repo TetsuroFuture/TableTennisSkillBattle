@@ -565,6 +565,8 @@ function updateRatedBattleSubtitle() {
 async function findRatedOpponent() {
     const playerDisplayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
     const playerId = currentPlayerId;
+    const activeChar = getActiveCharacter();
+    const characterId = activeChar ? activeChar.id : null;
 
     if (!isFirebaseReady || !db || !playerId) {
         return createCpuOpponentForRated(playerDisplayRate);
@@ -574,13 +576,14 @@ async function findRatedOpponent() {
         const cache = loadRateMatchCandidatesCache();
         let candidates = cache && Array.isArray(cache.candidates) ? cache.candidates : [];
 
-        if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate, playerId)) {
+        if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate, playerId, characterId)) {
             candidates = await fetchRateMatchCandidates(playerDisplayRate, playerId);
             if (candidates.length > 0) {
                 saveRateMatchCandidatesCache({
                     fetchedAt: Date.now(),
                     baseEffectiveRating: playerDisplayRate,
                     playerId,
+                    characterId,
                     candidates
                 });
             }
@@ -592,7 +595,12 @@ async function findRatedOpponent() {
 
         // 自分のplayerIdに紐づく選手は除外する（matchableCharacterはplayerIdフィールドで識別）
         // fetchRateMatchCandidatesでも除外しているが、キャッシュを使う場合を考慮して二重チェックする
-        const withoutSelf = candidates.filter(c => c.playerId !== playerId);
+        // 旧形式（playerId フィールドなし）のドキュメントにも対応するため、id ベースでも除外する
+        const withoutSelf = candidates.filter(c =>
+            c.playerId !== playerId &&
+            c.id !== playerId &&
+            !c.id.startsWith(`${playerId}_`)
+        );
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
         }
@@ -649,6 +657,7 @@ function normalizeRateMatchCandidatesCache(raw) {
         fetchedAt: raw.fetchedAt,
         baseEffectiveRating: raw.baseEffectiveRating,
         playerId: raw.playerId || null,
+        characterId: raw.characterId || null,
         candidates: normalizedCandidates
     };
 }
@@ -693,7 +702,7 @@ function clearRateMatchCandidatesCache() {
     localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
 }
 
-function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerId) {
+function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerId, characterId) {
     if (!cache) {
         return true;
     }
@@ -703,6 +712,11 @@ function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerI
     }
 
     if (cache.playerId !== playerId) {
+        return true;
+    }
+
+    // アクティブ選手が変わった場合はリフェッチする
+    if (cache.characterId !== (characterId || null)) {
         return true;
     }
 
@@ -717,6 +731,11 @@ function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerI
 async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
     const candidates = [];
     const candidateIds = new Set();
+    // 同一playerId（プレイヤーアカウント）の重複を防ぐためのSet。
+    // 複数選手登録に伴い、同一プレイヤーの旧形式ドキュメント（playerId フィールドなし）と
+    // 新形式ドキュメント（{playerId}_{characterId}）が両方 Firestore に存在する場合があるため、
+    // 1プレイヤーにつき1件のみ候補に含めるように管理する。
+    const candidatePlayerIds = new Set();
 
     for (let i = 0; i < RATE_MATCH_RANGE_STEPS.length; i += 1) {
         const range = RATE_MATCH_RANGE_STEPS[i];
@@ -730,12 +749,24 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
 
         snapshot.forEach(doc => {
             const data = doc.data();
-            if (data.playerId === playerId || candidateIds.has(doc.id)) {
+            // 自分のドキュメントを除外する。複数の形式に対応する:
+            // 1. 新形式: data.playerId フィールドで判定
+            // 2. 旧形式 (ドキュメントID = playerId のみ): doc.id が playerId と一致
+            // 3. 旧形式 (ドキュメントID = {playerId}_{anything}): doc.id が "{playerId}_" で始まる
+            const docPlayerId = data.playerId || null;
+            const isSelf = docPlayerId === playerId
+                || doc.id === playerId
+                || doc.id.startsWith(`${playerId}_`);
+            if (isSelf || candidateIds.has(doc.id)) {
+                return;
+            }
+            // 同一プレイヤーの複数ドキュメント（旧形式 + 新形式）が重複して候補に入らないよう除外する
+            if (docPlayerId && candidatePlayerIds.has(docPlayerId)) {
                 return;
             }
             candidates.push({
                 id: doc.id,
-                playerId: data.playerId,
+                playerId: docPlayerId,
                 characterId: data.characterId,
                 name: data.name || '匿名選手',
                 style: Number.isFinite(data.style) ? data.style : 0,
@@ -750,6 +781,9 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
                 equippedSkills: Array.isArray(data.equippedSkills) ? data.equippedSkills : []
             });
             candidateIds.add(doc.id);
+            if (docPlayerId) {
+                candidatePlayerIds.add(docPlayerId);
+            }
         });
 
         if (candidates.length >= MAX_RATE_MATCH_CANDIDATES) {
@@ -2169,6 +2203,18 @@ async function loadOrCreatePlayerData() {
                 player.characters = [char0];
                 player.activeCharacterIndex = 0;
                 addLog('既存の選手データをキャラクター形式に変換しました。', 'info');
+                // 旧形式 matchableCharacters ドキュメント（ドキュメントID = playerId のみ）を削除する。
+                // 旧形式ドキュメントが残っていると、マッチング時に自分自身が候補に出てしまうため削除が必要。
+                try {
+                    const oldDocRef = db.collection('matchableCharacters').doc(currentPlayerId);
+                    const oldDocSnap = await oldDocRef.get();
+                    if (oldDocSnap.exists) {
+                        await oldDocRef.delete();
+                        addLog('旧形式のマッチング候補データを削除しました。', 'info');
+                    }
+                } catch (err) {
+                    console.warn('旧形式 matchableCharacters の削除に失敗しました:', err);
+                }
                 await updateMatchableCharacter(currentPlayerId, char0);
                 await savePlayerData('互換データ移行中...');
             } else {
@@ -2416,6 +2462,9 @@ async function switchCharacter(newIndex) {
     syncPlayerToActiveCharacter();
     player.activeCharacterIndex = newIndex;
     syncActiveCharacterToPlayer();
+    // 選手を切り替えたら、マッチング候補キャッシュと直近対戦履歴をリセットする
+    clearRateMatchCandidatesCache();
+    recentRatedOpponentIds = [];
     renderAll();
     renderHomeCharacterSection();
     await savePlayerData('選手切替中...');
