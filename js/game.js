@@ -555,8 +555,9 @@ function updateRatedBattleSubtitle() {
 
 async function findRatedOpponent() {
     const playerDisplayRate = calculateEffectiveRate(player.rate, player.ratedMatches);
+    const playerId = currentPlayerId;
 
-    if (!isFirebaseReady || !db || !currentPlayerId) {
+    if (!isFirebaseReady || !db || !playerId) {
         return createCpuOpponentForRated(playerDisplayRate);
     }
 
@@ -564,13 +565,13 @@ async function findRatedOpponent() {
         const cache = loadRateMatchCandidatesCache();
         let candidates = cache && Array.isArray(cache.candidates) ? cache.candidates : [];
 
-        if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate)) {
-            candidates = await fetchRateMatchCandidates(playerDisplayRate);
+        if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate, playerId)) {
+            candidates = await fetchRateMatchCandidates(playerDisplayRate, playerId);
             if (candidates.length > 0) {
                 saveRateMatchCandidatesCache({
                     fetchedAt: Date.now(),
                     baseEffectiveRating: playerDisplayRate,
-                    playerId: currentPlayerId,
+                    playerId,
                     candidates
                 });
             }
@@ -580,7 +581,7 @@ async function findRatedOpponent() {
             return createCpuOpponentForRated(playerDisplayRate);
         }
 
-        const withoutSelf = candidates.filter(c => c.id !== currentPlayerId);
+        const withoutSelf = candidates.filter(c => c.id !== playerId);
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
         }
@@ -679,7 +680,7 @@ function clearRateMatchCandidatesCache() {
     localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
 }
 
-function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating) {
+function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerId) {
     if (!cache) {
         return true;
     }
@@ -688,7 +689,7 @@ function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating) {
         return true;
     }
 
-    if (cache.playerId !== currentPlayerId) {
+    if (cache.playerId !== playerId) {
         return true;
     }
 
@@ -700,7 +701,7 @@ function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating) {
     return ratingDiff >= RATE_MATCH_CANDIDATES_REFETCH_DIFF;
 }
 
-async function fetchRateMatchCandidates(playerDisplayRate) {
+async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
     const candidates = [];
     const candidateIds = new Set();
 
@@ -715,7 +716,7 @@ async function fetchRateMatchCandidates(playerDisplayRate) {
             .get();
 
         snapshot.forEach(doc => {
-            if (doc.id === currentPlayerId || candidateIds.has(doc.id)) {
+            if (doc.id === playerId || candidateIds.has(doc.id)) {
                 return;
             }
             const data = doc.data();
