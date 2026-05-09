@@ -590,6 +590,7 @@ async function findRatedOpponent() {
         }
 
         // 自分のplayerIdに紐づく選手は除外する（matchableCharacterはplayerIdフィールドで識別）
+        // fetchRateMatchCandidatesでも除外しているが、キャッシュを使う場合を考慮して二重チェックする
         const withoutSelf = candidates.filter(c => c.playerId !== playerId);
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
@@ -613,9 +614,9 @@ function normalizeRateMatchCandidate(raw) {
         ? raw.displayRate
         : calculateEffectiveRate(rate, ratedMatches);
     return {
-        id: raw.id,
-        playerId: raw.playerId || null,
-        characterId: raw.characterId || null,
+        id: raw.id,                         // matchableCharacterId ({playerId}_{characterId})
+        playerId: raw.playerId || null,      // 対戦候補の所有者playerId（自己除外に使用）
+        characterId: raw.characterId || null, // 選手ごとの固有ID
         name: raw.name || '匿名選手',
         style: Number.isFinite(raw.style) ? raw.style : 0,
         rate,
@@ -1947,6 +1948,8 @@ function hasPlayerDataChanged(before, after) {
         }
     }
     // characters配列の変更を検出する（選手数の増減）
+    // before.characterCount はclonePlayerSnapshotで設定されたスナップショット値、
+    // after.characters.length は現在のlive playerオブジェクトから計算する（after.characterCountは存在しない）。
     const beforeCharCount = Number.isFinite(before.characterCount) ? before.characterCount : 0;
     const afterCharCount = Array.isArray(after.characters) ? after.characters.length : 0;
     if (beforeCharCount !== afterCharCount) {
@@ -2005,7 +2008,8 @@ async function savePlayerData(saveLabel = '保存中...') {
 
     try {
         const docRef = db.collection('players').doc(currentPlayerId);
-        // 保存前にアクティブ選手のデータを同期する
+        // 保存前にアクティブ選手のデータをcharacters配列に同期する。
+        // 既存処理はtopレベルのplayerフィールドを更新するため、保存前にcharactersへ反映が必要。
         syncPlayerToActiveCharacter();
         const saveData = mapPlayerToFirestoreData(player, currentPlayerId);
 
@@ -2399,6 +2403,7 @@ async function updateMatchableCharacter(playerId, character) {
 
 async function switchCharacter(newIndex) {
     if (!Array.isArray(player.characters) || newIndex < 0 || newIndex >= player.characters.length) {
+        addLog('指定された選手が存在しません。', 'warning');
         return;
     }
     syncPlayerToActiveCharacter();
@@ -2418,7 +2423,7 @@ async function createNewCharacter(name, styleIndex) {
         return false;
     }
     const newChar = createNewCharacterData(name, styleIndex);
-    // 初期スキルを1枚付与する（全スキル解放は syncActiveCharacterToPlayer で行われる）
+    // 初期スキルを1枚付与する。全スキル解放はsyncActiveCharacterToPlayer内のunlockAllSkillsで行われる。
     const unownedSkills = skillCards.filter(s => !newChar.skills.includes(s.id));
     if (unownedSkills.length > 0) {
         const randomSkill = unownedSkills[Math.floor(Math.random() * unownedSkills.length)];
@@ -2433,7 +2438,9 @@ async function createNewCharacter(name, styleIndex) {
         await updateMatchableCharacter(currentPlayerId, newChar);
     }
     await savePlayerData('新選手登録中...');
-    addLog(`新しい選手「${name}」(${styles[styleIndex].name})を登録しました！`, 'success');
+    const styleName = (Number.isFinite(styleIndex) && styleIndex >= 0 && styleIndex < styles.length)
+        ? styles[styleIndex].name : '不明';
+    addLog(`新しい選手「${name}」(${styleName})を登録しました！`, 'success');
     return true;
 }
 
@@ -6059,7 +6066,10 @@ function renderHomeCharacterSection() {
     const addBtn = document.getElementById('addCharacterBtn');
 
     if (nameEl) nameEl.textContent = char.name || '-';
-    if (styleEl) styleEl.textContent = Number.isFinite(char.style) ? styles[char.style].name : '未選択';
+    if (styleEl) {
+        const styleValid = Number.isFinite(char.style) && char.style >= 0 && char.style < styles.length;
+        styleEl.textContent = styleValid ? styles[char.style].name : '未選択';
+    }
     if (levelEl) levelEl.textContent = `Lv ${char.level || 1}`;
     if (rateEl) {
         const displayRate = calculateEffectiveRate(
