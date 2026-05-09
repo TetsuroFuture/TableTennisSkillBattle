@@ -303,8 +303,9 @@ const RATE_MATCH_CANDIDATES_CACHE_TTL_MS = 60 * 60 * 1000;
 const RATE_MATCH_CANDIDATES_REFETCH_DIFF = 100;
 const RATE_MATCH_RANGE_STEPS = [100, 200, 300];
 const MAX_RATE_MATCH_CANDIDATES = 30;
+const MAX_RECENT_RATED_OPPONENT_IDS = 5;
 let selectedRatedOpponent = null;
-let lastRatedOpponentId = null;
+let recentRatedOpponentIds = [];
 let ratedMatchCandidatesCache = null;
 let recentRatedWins = 0;
 let recentRatedLosses = 0;
@@ -595,7 +596,7 @@ async function findRatedOpponent() {
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
         }
-        const filtered = withoutSelf.filter(c => c.id !== lastRatedOpponentId);
+        const filtered = withoutSelf.filter(c => !recentRatedOpponentIds.includes(c.id));
         const pool = filtered.length > 0 ? filtered : withoutSelf;
         return pool[Math.floor(Math.random() * pool.length)];
     } catch (error) {
@@ -786,7 +787,13 @@ async function handleFindRatedOpponent() {
         const opponent = await findRatedOpponent();
         if (opponent) {
             selectedRatedOpponent = opponent;
-            lastRatedOpponentId = opponent.id || null;
+            if (opponent.id) {
+                recentRatedOpponentIds = recentRatedOpponentIds.filter(id => id !== opponent.id);
+                recentRatedOpponentIds.unshift(opponent.id);
+                if (recentRatedOpponentIds.length > MAX_RECENT_RATED_OPPONENT_IDS) {
+                    recentRatedOpponentIds.length = MAX_RECENT_RATED_OPPONENT_IDS;
+                }
+            }
             renderRatedOpponentPreview(opponent);
 
             const opponentArea = document.getElementById('ratedOpponentArea');
