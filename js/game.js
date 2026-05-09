@@ -501,7 +501,14 @@ async function renderRecentRatedBattleList(playerId) {
             recentMatches.push(doc.data());
         });
 
-        const latestFiveMatches = recentMatches
+        // アクティブ選手のRate戦履歴のみ表示する（characterIdが一致するもの、または旧形式で characterId がないもの）
+        const activeChar = getActiveCharacter();
+        const activeCharId = activeChar ? activeChar.id : null;
+        const filteredMatches = activeCharId
+            ? recentMatches.filter(d => !d.characterId || d.characterId === activeCharId)
+            : recentMatches;
+
+        const latestFiveMatches = filteredMatches
             .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
             .slice(0, 5);
 
@@ -606,6 +613,8 @@ function normalizeRateMatchCandidate(raw) {
         : calculateEffectiveRate(rate, ratedMatches);
     return {
         id: raw.id,
+        playerId: raw.playerId || null,
+        characterId: raw.characterId || null,
         name: raw.name || '匿名選手',
         style: Number.isFinite(raw.style) ? raw.style : 0,
         rate,
@@ -2082,8 +2091,12 @@ async function saveMatchResult(matchResult) {
         // バトルログはFirestoreに保存しない（書き込み量削減のため）。
         // ログはメモリ上（battleLines）に保持され、バトル結果画面の表示には引き続き利用される。
         // Firestoreには最小限のサマリーのみ保存する。
+        const activeChar = getActiveCharacter();
         await db.collection('matches').add({
             playerId: currentPlayerId,
+            characterId: activeChar ? activeChar.id : null,
+            characterName: player.name,
+            characterStyle: Number.isFinite(player.style) ? player.style : null,
             playerName: player.name,
             playerStyle: matchResult.playerStyle,
             enemyName: matchResult.enemyName || null,
