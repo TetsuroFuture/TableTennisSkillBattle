@@ -589,6 +589,7 @@ async function findRatedOpponent() {
             return createCpuOpponentForRated(playerDisplayRate);
         }
 
+        // 自分のplayerIdに紐づく選手は除外する（matchableCharacterはplayerIdフィールドで識別）
         const withoutSelf = candidates.filter(c => c.playerId !== playerId);
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
@@ -1938,12 +1939,18 @@ function hasPlayerDataChanged(before, after) {
         'exp', 'usableExp', 'level', 'wins', 'losses',
         'skills', 'equippedSkills',
         'rate', 'ratedMatches', 'ratedWins', 'ratedLosses', 'ratedDraws', 'maxRate',
-        'activeCharacterIndex', 'characterCount'
+        'activeCharacterIndex'
     ];
     for (const field of fields) {
         if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
             return true;
         }
+    }
+    // characters配列の変更を検出する（選手数の増減）
+    const beforeCharCount = Number.isFinite(before.characterCount) ? before.characterCount : 0;
+    const afterCharCount = Array.isArray(after.characters) ? after.characters.length : 0;
+    if (beforeCharCount !== afterCharCount) {
+        return true;
     }
     return false;
 }
@@ -2095,8 +2102,10 @@ async function saveMatchResult(matchResult) {
         await db.collection('matches').add({
             playerId: currentPlayerId,
             characterId: activeChar ? activeChar.id : null,
-            characterName: player.name,
-            characterStyle: Number.isFinite(player.style) ? player.style : null,
+            characterName: activeChar ? activeChar.name : player.name,
+            characterStyle: activeChar
+                ? (Number.isFinite(activeChar.style) ? activeChar.style : null)
+                : (Number.isFinite(player.style) ? player.style : null),
             playerName: player.name,
             playerStyle: matchResult.playerStyle,
             enemyName: matchResult.enemyName || null,
@@ -2409,7 +2418,12 @@ async function createNewCharacter(name, styleIndex) {
         return false;
     }
     const newChar = createNewCharacterData(name, styleIndex);
-    gainRandomSkill({ skills: newChar.skills, equippedSkills: newChar.equippedSkills });
+    // 初期スキルを1枚付与する（全スキル解放は syncActiveCharacterToPlayer で行われる）
+    const unownedSkills = skillCards.filter(s => !newChar.skills.includes(s.id));
+    if (unownedSkills.length > 0) {
+        const randomSkill = unownedSkills[Math.floor(Math.random() * unownedSkills.length)];
+        newChar.skills.push(randomSkill.id);
+    }
     player.characters.push(newChar);
     player.activeCharacterIndex = player.characters.length - 1;
     syncActiveCharacterToPlayer();
@@ -6072,14 +6086,15 @@ function renderCharacterList() {
 
     container.innerHTML = chars.map((char, idx) => {
         const isActive = idx === player.activeCharacterIndex;
-        const styleName = Number.isFinite(char.style) ? styles[char.style].name : '未選択';
+        const styleValid = Number.isFinite(char.style) && char.style >= 0 && char.style < styles.length;
+        const styleName = styleValid ? styles[char.style].name : '未選択';
         const displayRate = calculateEffectiveRate(
             Number.isFinite(char.rate) ? char.rate : 1500,
             Number.isFinite(char.ratedMatches) ? char.ratedMatches : 0
         );
         const record = `${char.wins || 0}勝 ${char.losses || 0}敗 ${char.ratedDraws || 0}分`;
         const statLine = `ATK:${char.atk||10} DEF:${char.def||10} SPD:${char.spd||10} TEC:${char.tec||10} STA:${char.sta||10}`;
-        const imgSrc = Number.isFinite(char.style) ? getRataCharacterImageSrc(styles[char.style].name, 'normal') : '';
+        const imgSrc = styleValid ? getRataCharacterImageSrc(styles[char.style].name, 'normal') : '';
 
         return `
             <div class="character-card ${isActive ? 'character-card-active' : ''}">
@@ -6176,7 +6191,10 @@ function renderNewCharStyleList() {
             container.querySelectorAll('.new-char-style-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             const styleId = parseInt(this.dataset.style, 10);
-            const selectedStyle = styles[styleId];
+            const selectedStyle = Number.isFinite(styleId) && styleId >= 0 && styleId < styles.length
+                ? styles[styleId]
+                : null;
+            if (!selectedStyle) return;
             const infoEl = document.getElementById('newCharSelectedStyleInfo');
             if (infoEl && selectedStyle) {
                 infoEl.innerHTML = `<p><strong>${selectedStyle.name}</strong><br><small>${selectedStyle.description}</small></p>`;
