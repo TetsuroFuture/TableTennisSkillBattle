@@ -105,6 +105,48 @@
         </div>
     </div>
 
+    <!-- 選手一覧モーダル -->
+    <div id="characterListModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content character-list-modal">
+            <div class="modal-header">
+                <h2>育成中の選手</h2>
+                <button class="modal-close-btn" id="closeCharacterListBtn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="characterList" class="character-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新規選手作成オーバーレイ -->
+    <div id="newCharacterOverlay" class="setup-overlay" style="display:none;">
+        <div class="setup-modal">
+            <div class="setup-header">
+                <h2>🏓 新しい戦型に挑戦しよう</h2>
+                <p class="setup-subtitle">前陣速攻で攻めるか、ペン粒で崩すか、カットマンで粘るか。<br>君だけの選手団を育てよう！</p>
+            </div>
+            <div class="setup-step" id="newCharStep1">
+                <p class="setup-step-label">STEP 1 / 2 &mdash; 選手名入力</p>
+                <input type="text" id="newCharNameInput" class="setup-name-input"
+                       placeholder="選手名を入力（例: 山田次郎）" maxlength="12">
+                <p class="setup-name-error" id="newCharNameError" style="display:none;"></p>
+                <p class="setup-note">※ 選手名は後から変更できません</p>
+                <button class="setup-btn-next" id="newCharStep1NextBtn">次へ →</button>
+                <button class="setup-btn-cancel" id="newCharCancelBtn">キャンセル</button>
+            </div>
+            <div class="setup-step" id="newCharStep2" style="display:none;">
+                <p class="setup-step-label">STEP 2 / 2 &mdash; 戦型選択</p>
+                <p class="setup-note">※ 戦型は後から変更できません。慎重に選んでください。</p>
+                <div id="newCharStyleList" class="setup-style-list"></div>
+                <div class="setup-selected-info" id="newCharSelectedStyleInfo">
+                    <p>戦型を選択してください</p>
+                </div>
+                <button class="setup-btn-confirm" id="newCharConfirmBtn" disabled>この選手で育成を始める ✓</button>
+                <button class="setup-btn-cancel" id="newCharBackBtn">← 戻る</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 初回セットアップオーバーレイ -->
     <div id="setupOverlay" class="setup-overlay" style="display:none;">
         <div class="setup-modal">
@@ -187,6 +229,27 @@
                 <span class="home-player-status-sep">　装備枠　</span>
                 <span id="homeEquipSlots" class="home-player-slots">0 / 2</span>
                 <div id="homeNextEquipSlot" class="home-next-equip-slot">次の装備枠解放：Lv5で3枠</div>
+            </div>
+
+            <!-- HOME画面: 現在の選手 -->
+            <div class="home-character-section" id="homeCharacterSection">
+                <div class="home-character-header">
+                    <h3 class="home-character-title">現在の選手</h3>
+                    <span class="home-character-active-badge">使用中</span>
+                </div>
+                <div class="home-character-info">
+                    <div class="home-character-name" id="homeCharacterName">-</div>
+                    <div class="home-character-style" id="homeCharacterStyle">-</div>
+                    <div class="home-character-stats-row">
+                        <span id="homeCharacterLevel">Lv 1</span>
+                        <span class="home-char-sep">|</span>
+                        <span id="homeCharacterRate">Rate -</span>
+                    </div>
+                </div>
+                <div class="home-character-actions">
+                    <button class="home-char-btn" id="switchCharacterBtn">👤 選手を切り替える</button>
+                    <button class="home-char-btn home-char-btn-new" id="addCharacterBtn">＋ 別の戦型を育てる</button>
+                </div>
             </div>
 
             <!-- HOME画面: メニュー -->
