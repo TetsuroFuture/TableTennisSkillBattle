@@ -5,6 +5,7 @@
 
 const LOCAL_PLAYER_ID_KEY = 'ttsb_player_id';
 const LOCAL_SETUP_COMPLETE_KEY = 'ttsb_setup_complete';
+const LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY = 'rateMatchCandidatesCache';
 
 // ============================================================
 // バランス調整定数
@@ -296,10 +297,14 @@ function setupBattleModeSelectButtons() {
 const RATED_PROVISIONAL_THRESHOLD = 20;
 const MAX_PROVISIONAL_PENALTY = 300;
 const RATING_K_FACTOR = 32;
-const MAX_OPPONENT_POOL_SIZE = 10;
 const MAX_OPPONENT_FETCH_SIZE = 50;
+const RATE_MATCH_CANDIDATES_CACHE_TTL_MS = 60 * 60 * 1000;
+const RATE_MATCH_CANDIDATES_REFETCH_DIFF = 100;
+const RATE_MATCH_RANGE_STEPS = [100, 200, 300];
+const MAX_RATE_MATCH_CANDIDATES = 30;
 let selectedRatedOpponent = null;
 let lastRatedOpponentId = null;
+let ratedMatchCandidatesCache = null;
 let recentRatedWins = 0;
 let recentRatedLosses = 0;
 
@@ -556,17 +561,161 @@ async function findRatedOpponent() {
     }
 
     try {
-        const rateMin = Math.max(100, playerDisplayRate - 300);
-        const rateMax = playerDisplayRate + 300 + MAX_PROVISIONAL_PENALTY;
+        const cache = loadRateMatchCandidatesCache();
+        let candidates = cache && Array.isArray(cache.candidates) ? cache.candidates : [];
+
+        if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate)) {
+            candidates = await fetchRateMatchCandidates(playerDisplayRate);
+            if (candidates.length > 0) {
+                saveRateMatchCandidatesCache({
+                    fetchedAt: Date.now(),
+                    baseEffectiveRating: playerDisplayRate,
+                    playerId: currentPlayerId,
+                    candidates
+                });
+            }
+        }
+
+        if (candidates.length === 0) {
+            return createCpuOpponentForRated(playerDisplayRate);
+        }
+
+        const withoutSelf = candidates.filter(c => c.id !== currentPlayerId);
+        if (withoutSelf.length === 0) {
+            return createCpuOpponentForRated(playerDisplayRate);
+        }
+        const filtered = withoutSelf.filter(c => c.id !== lastRatedOpponentId);
+        const pool = filtered.length > 0 ? filtered : withoutSelf;
+        return pool[Math.floor(Math.random() * pool.length)];
+    } catch (error) {
+        console.error('Failed to query rated opponents', error);
+        return createCpuOpponentForRated(playerDisplayRate);
+    }
+}
+
+function normalizeRateMatchCandidate(raw) {
+    if (!raw || typeof raw !== 'object' || !raw.id) {
+        return null;
+    }
+    const rate = Number.isFinite(raw.rate) ? raw.rate : 1500;
+    const ratedMatches = Number.isFinite(raw.ratedMatches) ? raw.ratedMatches : 0;
+    const displayRate = Number.isFinite(raw.displayRate)
+        ? raw.displayRate
+        : calculateEffectiveRate(rate, ratedMatches);
+    return {
+        id: raw.id,
+        name: raw.name || '匿名選手',
+        style: Number.isFinite(raw.style) ? raw.style : 0,
+        rate,
+        ratedMatches,
+        displayRate,
+        atk: Number.isFinite(raw.atk) ? raw.atk : 10,
+        def: Number.isFinite(raw.def) ? raw.def : 10,
+        spd: Number.isFinite(raw.spd) ? raw.spd : 10,
+        tec: Number.isFinite(raw.tec) ? raw.tec : 10,
+        sta: Number.isFinite(raw.sta) ? raw.sta : 10,
+        equippedSkills: Array.isArray(raw.equippedSkills) ? raw.equippedSkills : []
+    };
+}
+
+function normalizeRateMatchCandidatesCache(raw) {
+    if (!raw || typeof raw !== 'object') {
+        return null;
+    }
+    if (!Number.isFinite(raw.fetchedAt) || !Number.isFinite(raw.baseEffectiveRating)) {
+        return null;
+    }
+    if (!Array.isArray(raw.candidates)) {
+        return null;
+    }
+    const normalizedCandidates = raw.candidates
+        .map(candidate => normalizeRateMatchCandidate(candidate))
+        .filter(Boolean);
+    return {
+        fetchedAt: raw.fetchedAt,
+        baseEffectiveRating: raw.baseEffectiveRating,
+        playerId: raw.playerId || null,
+        candidates: normalizedCandidates
+    };
+}
+
+function loadRateMatchCandidatesCache() {
+    if (ratedMatchCandidatesCache) {
+        return ratedMatchCandidatesCache;
+    }
+
+    const raw = localStorage.getItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
+    if (!raw) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        const normalized = normalizeRateMatchCandidatesCache(parsed);
+        if (!normalized) {
+            localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
+            return null;
+        }
+        ratedMatchCandidatesCache = normalized;
+        return ratedMatchCandidatesCache;
+    } catch (error) {
+        console.warn('マッチング候補キャッシュの読み込みに失敗しました', error);
+        localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
+        return null;
+    }
+}
+
+function saveRateMatchCandidatesCache(cache) {
+    const normalized = normalizeRateMatchCandidatesCache(cache);
+    if (!normalized) {
+        return;
+    }
+    ratedMatchCandidatesCache = normalized;
+    localStorage.setItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY, JSON.stringify(ratedMatchCandidatesCache));
+}
+
+function clearRateMatchCandidatesCache() {
+    ratedMatchCandidatesCache = null;
+    localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
+}
+
+function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating) {
+    if (!cache) {
+        return true;
+    }
+
+    if (!Array.isArray(cache.candidates) || cache.candidates.length === 0) {
+        return true;
+    }
+
+    if (cache.playerId !== currentPlayerId) {
+        return true;
+    }
+
+    if (Date.now() - cache.fetchedAt >= RATE_MATCH_CANDIDATES_CACHE_TTL_MS) {
+        return true;
+    }
+
+    const ratingDiff = Math.abs(currentEffectiveRating - cache.baseEffectiveRating);
+    return ratingDiff >= RATE_MATCH_CANDIDATES_REFETCH_DIFF;
+}
+
+async function fetchRateMatchCandidates(playerDisplayRate) {
+    const candidates = [];
+    const candidateIds = new Set();
+
+    for (let i = 0; i < RATE_MATCH_RANGE_STEPS.length; i += 1) {
+        const range = RATE_MATCH_RANGE_STEPS[i];
+        const rateMin = Math.max(100, playerDisplayRate - range);
+        const rateMax = playerDisplayRate + range + MAX_PROVISIONAL_PENALTY;
         const snapshot = await db.collection('players')
             .where('rate', '>=', rateMin)
             .where('rate', '<=', rateMax)
             .limit(MAX_OPPONENT_FETCH_SIZE)
             .get();
 
-        const candidates = [];
         snapshot.forEach(doc => {
-            if (doc.id === currentPlayerId) {
+            if (doc.id === currentPlayerId || candidateIds.has(doc.id)) {
                 return;
             }
             const data = doc.data();
@@ -588,23 +737,18 @@ async function findRatedOpponent() {
                 sta: Number.isFinite(data.sta) ? data.sta : 10,
                 equippedSkills: Array.isArray(data.equippedSkills) ? data.equippedSkills : []
             });
+            candidateIds.add(doc.id);
         });
 
-        if (candidates.length === 0) {
-            return createCpuOpponentForRated(playerDisplayRate);
+        if (candidates.length >= MAX_RATE_MATCH_CANDIDATES) {
+            break;
         }
-
-        candidates.sort((a, b) =>
-            Math.abs(a.displayRate - playerDisplayRate) - Math.abs(b.displayRate - playerDisplayRate)
-        );
-        const top10 = candidates.slice(0, MAX_OPPONENT_POOL_SIZE);
-        const filtered = top10.filter(c => c.id !== lastRatedOpponentId);
-        const pool = filtered.length > 0 ? filtered : top10;
-        return pool[Math.floor(Math.random() * pool.length)];
-    } catch (error) {
-        console.error('Failed to query rated opponents', error);
-        return createCpuOpponentForRated(playerDisplayRate);
     }
+
+    candidates.sort((a, b) =>
+        Math.abs(a.displayRate - playerDisplayRate) - Math.abs(b.displayRate - playerDisplayRate)
+    );
+    return candidates.slice(0, MAX_RATE_MATCH_CANDIDATES);
 }
 
 function createCpuOpponentForRated(targetRate) {
@@ -5550,6 +5694,7 @@ function setupLogoutButton() {
         if (!confirm('ログアウトしますか？\nログアウトするとログイン画面に戻ります。')) {
             return;
         }
+        clearRateMatchCandidatesCache();
         localStorage.removeItem(LOCAL_PLAYER_ID_KEY);
         localStorage.removeItem(LOCAL_SETUP_COMPLETE_KEY);
         location.reload();
