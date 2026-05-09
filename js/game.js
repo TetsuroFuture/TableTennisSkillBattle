@@ -241,6 +241,7 @@ function applyRatedBattleForfeit() {
     const netRateChange = displayRateAfter - displayRateBefore;
     addLog(`対戦をキャンセルしました。負け扱い。Rate変動: ${netRateChange >= 0 ? '+' : ''}${netRateChange}`, 'warning');
 
+    clearRateMatchCandidatesCache();
     selectedRatedOpponent = null;
     autoSavePlayer('match_finished');
 }
@@ -303,6 +304,7 @@ const RATE_MATCH_CANDIDATES_CACHE_TTL_MS = 60 * 60 * 1000;
 const RATE_MATCH_CANDIDATES_REFETCH_DIFF = 100;
 const RATE_MATCH_RANGE_STEPS = [100, 200, 300];
 const MAX_RATE_MATCH_CANDIDATES = 30;
+const MIN_RATE_MATCH_CANDIDATES_FOR_CACHE = 5;
 const MAX_RECENT_RATED_OPPONENT_IDS = 5;
 let selectedRatedOpponent = null;
 let recentRatedOpponentIds = [];
@@ -578,7 +580,7 @@ async function findRatedOpponent() {
 
         if (shouldRefetchRateMatchCandidates(cache, playerDisplayRate, playerId, characterId)) {
             candidates = await fetchRateMatchCandidates(playerDisplayRate, playerId);
-            if (candidates.length > 0) {
+            if (candidates.length >= MIN_RATE_MATCH_CANDIDATES_FOR_CACHE) {
                 saveRateMatchCandidatesCache({
                     fetchedAt: Date.now(),
                     baseEffectiveRating: playerDisplayRate,
@@ -586,6 +588,8 @@ async function findRatedOpponent() {
                     characterId,
                     candidates
                 });
+            } else {
+                clearRateMatchCandidatesCache();
             }
         }
 
@@ -601,12 +605,16 @@ async function findRatedOpponent() {
             c.id !== playerId &&
             !c.id.startsWith(`${playerId}_`)
         );
+        console.log('[RateMatch] 自分除外後候補件数:', withoutSelf.length);
         if (withoutSelf.length === 0) {
             return createCpuOpponentForRated(playerDisplayRate);
         }
         const filtered = withoutSelf.filter(c => !recentRatedOpponentIds.includes(c.id));
+        console.log('[RateMatch] 直近相手除外後候補件数:', filtered.length);
         const pool = filtered.length > 0 ? filtered : withoutSelf;
-        return pool[Math.floor(Math.random() * pool.length)];
+        const selected = pool[Math.floor(Math.random() * pool.length)];
+        console.log('[RateMatch] 最終選択 opponent:', selected ? selected.id : null, selected ? selected.name : null);
+        return selected;
     } catch (error) {
         console.error('Failed to query rated opponents', error);
         return createCpuOpponentForRated(playerDisplayRate);
@@ -731,6 +739,8 @@ function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerI
 async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
     const candidates = [];
     const candidateIds = new Set();
+    let matchableCharactersFetchedCount = 0;
+    let fallbackPlayersFetchedCount = 0;
     // 同一playerId（プレイヤーアカウント）の重複を防ぐためのSet。
     // 複数選手登録に伴い、同一プレイヤーの旧形式ドキュメント（playerId フィールドなし）と
     // 新形式ドキュメント（{playerId}_{characterId}）が両方 Firestore に存在する場合があるため、
@@ -746,6 +756,7 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
             .where('displayRate', '<=', rateMax)
             .limit(MAX_OPPONENT_FETCH_SIZE)
             .get();
+        matchableCharactersFetchedCount += snapshot.size;
 
         snapshot.forEach(doc => {
             const data = doc.data();
@@ -772,7 +783,12 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
                 style: Number.isFinite(data.style) ? data.style : 0,
                 rate: Number.isFinite(data.rate) ? data.rate : 1500,
                 ratedMatches: Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0,
-                displayRate: Number.isFinite(data.displayRate) ? data.displayRate : 1500,
+                displayRate: Number.isFinite(data.displayRate)
+                    ? data.displayRate
+                    : calculateEffectiveRate(
+                        Number.isFinite(data.rate) ? data.rate : 1500,
+                        Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
+                    ),
                 atk: Number.isFinite(data.atk) ? data.atk : 10,
                 def: Number.isFinite(data.def) ? data.def : 10,
                 spd: Number.isFinite(data.spd) ? data.spd : 10,
@@ -790,6 +806,58 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
             break;
         }
     }
+
+    if (candidates.length < MIN_RATE_MATCH_CANDIDATES_FOR_CACHE) {
+        const fallbackSnapshot = await db.collection('players')
+            .limit(MAX_OPPONENT_FETCH_SIZE)
+            .get();
+        fallbackPlayersFetchedCount = fallbackSnapshot.size;
+
+        fallbackSnapshot.forEach(doc => {
+            if (candidates.length >= MAX_RATE_MATCH_CANDIDATES) {
+                return;
+            }
+            const data = doc.data() || {};
+            const fallbackPlayerId = doc.id;
+            if (fallbackPlayerId === playerId) {
+                return;
+            }
+            if (candidatePlayerIds.has(fallbackPlayerId)) {
+                return;
+            }
+            if (candidateIds.has(doc.id)) {
+                return;
+            }
+
+            const rate = Number.isFinite(data.rate) ? data.rate : 1500;
+            const ratedMatches = Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0;
+            const displayRate = Number.isFinite(data.displayRate)
+                ? data.displayRate
+                : calculateEffectiveRate(rate, ratedMatches);
+
+            candidates.push({
+                id: doc.id,
+                playerId: fallbackPlayerId,
+                characterId: data.characterId || 'legacy',
+                name: data.name || '匿名選手',
+                style: Number.isFinite(data.style) ? data.style : 0,
+                rate,
+                ratedMatches,
+                displayRate,
+                atk: Number.isFinite(data.atk) ? data.atk : 10,
+                def: Number.isFinite(data.def) ? data.def : 10,
+                spd: Number.isFinite(data.spd) ? data.spd : 10,
+                tec: Number.isFinite(data.tec) ? data.tec : 10,
+                sta: Number.isFinite(data.sta) ? data.sta : 10,
+                equippedSkills: Array.isArray(data.equippedSkills) ? data.equippedSkills : []
+            });
+            candidateIds.add(doc.id);
+            candidatePlayerIds.add(fallbackPlayerId);
+        });
+    }
+
+    console.log('[RateMatch] matchableCharacters取得件数:', matchableCharactersFetchedCount);
+    console.log('[RateMatch] playersフォールバック取得件数:', fallbackPlayersFetchedCount);
 
     candidates.sort((a, b) =>
         Math.abs(a.displayRate - playerDisplayRate) - Math.abs(b.displayRate - playerDisplayRate)
@@ -2062,13 +2130,8 @@ async function savePlayerData(saveLabel = '保存中...') {
 
         updateSaveStatus(`保存完了 (${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })})`);
 
-        // matchableCharactersを更新する
-        const activeChar = getActiveCharacter();
-        if (activeChar) {
-            updateMatchableCharacter(currentPlayerId, activeChar).catch(err => {
-                console.error('matchableCharacters更新失敗:', err);
-            });
-        }
+        // matchableCharactersを更新する（全選手を同期）
+        await syncAllMatchableCharacters(currentPlayerId);
 
         return true;
     } catch (error) {
@@ -2218,10 +2281,7 @@ async function loadOrCreatePlayerData() {
                 await updateMatchableCharacter(currentPlayerId, char0);
                 await savePlayerData('互換データ移行中...');
             } else {
-                const activeChar = getActiveCharacter();
-                if (activeChar) {
-                    await updateMatchableCharacter(currentPlayerId, activeChar);
-                }
+                await syncAllMatchableCharacters(currentPlayerId);
             }
             return;
         }
@@ -2454,6 +2514,13 @@ async function updateMatchableCharacter(playerId, character) {
     }
 }
 
+async function syncAllMatchableCharacters(playerId) {
+    if (!isFirebaseReady || !db || !playerId || !Array.isArray(player.characters) || player.characters.length === 0) {
+        return;
+    }
+    await Promise.all(player.characters.map(character => updateMatchableCharacter(playerId, character)));
+}
+
 async function switchCharacter(newIndex) {
     if (!Array.isArray(player.characters) || newIndex < 0 || newIndex >= player.characters.length) {
         addLog('指定された選手が存在しません。', 'warning');
@@ -2490,9 +2557,6 @@ async function createNewCharacter(name, styleIndex) {
     syncActiveCharacterToPlayer();
     renderAll();
     renderHomeCharacterSection();
-    if (currentPlayerId) {
-        await updateMatchableCharacter(currentPlayerId, newChar);
-    }
     await savePlayerData('新選手登録中...');
     const styleName = (Number.isFinite(styleIndex) && styleIndex >= 0 && styleIndex < styles.length)
         ? styles[styleIndex].name : '不明';
@@ -4761,6 +4825,9 @@ function applyMatchResult(result) {
     });
 
     renderAll();
+    if (result.mode === 'rated') {
+        clearRateMatchCandidatesCache();
+    }
     autoSavePlayer('match_finished');
 
     lastBattleResult = {
