@@ -5,7 +5,8 @@
 
 const LOCAL_PLAYER_ID_KEY = 'ttsb_player_id';
 const LOCAL_SETUP_COMPLETE_KEY = 'ttsb_setup_complete';
-const LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY = 'rateMatchCandidatesCache';
+const LEGACY_RATE_MATCH_CANDIDATES_CACHE_KEY = 'rateMatchCandidatesCache';
+const LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY = 'rateMatchCandidatesCache_v2';
 const MAX_CHARACTERS = 3;
 
 // ============================================================
@@ -302,7 +303,8 @@ const RATING_K_FACTOR = 32;
 const MAX_OPPONENT_FETCH_SIZE = 50;
 const RATE_MATCH_CANDIDATES_CACHE_TTL_MS = 60 * 60 * 1000;
 const RATE_MATCH_CANDIDATES_REFETCH_DIFF = 100;
-const RATE_MATCH_RANGE_STEPS = [100, 200, 300];
+const RATE_MATCH_MAX_DIFF = 200;
+const RATE_MATCH_RANGE_STEPS = [100, 200];
 const MAX_RATE_MATCH_CANDIDATES = 30;
 const MIN_RATE_MATCH_CANDIDATES_FOR_CACHE = 5;
 const MAX_RECENT_RATED_OPPONENT_IDS = 5;
@@ -597,10 +599,20 @@ async function findRatedOpponent() {
             return createCpuOpponentForRated(playerDisplayRate);
         }
 
+        const withinRateRange = candidates.filter(c => {
+            const opponentDisplayRate = Number.isFinite(c.displayRate)
+                ? c.displayRate
+                : calculateEffectiveRate(c.rate || 1500, c.ratedMatches || 0);
+            return Math.abs(opponentDisplayRate - playerDisplayRate) <= RATE_MATCH_MAX_DIFF;
+        });
+        if (withinRateRange.length === 0) {
+            return createCpuOpponentForRated(playerDisplayRate);
+        }
+
         // 自分のplayerIdに紐づく選手は除外する（matchableCharacterはplayerIdフィールドで識別）
         // fetchRateMatchCandidatesでも除外しているが、キャッシュを使う場合を考慮して二重チェックする
         // 旧形式（playerId フィールドなし）のドキュメントにも対応するため、id ベースでも除外する
-        const withoutSelf = candidates.filter(c =>
+        const withoutSelf = withinRateRange.filter(c =>
             c.playerId !== playerId &&
             c.id !== playerId &&
             !c.id.startsWith(`${playerId}_`)
@@ -675,6 +687,8 @@ function loadRateMatchCandidatesCache() {
         return ratedMatchCandidatesCache;
     }
 
+    localStorage.removeItem(LEGACY_RATE_MATCH_CANDIDATES_CACHE_KEY);
+
     const raw = localStorage.getItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
     if (!raw) {
         return null;
@@ -708,6 +722,7 @@ function saveRateMatchCandidatesCache(cache) {
 function clearRateMatchCandidatesCache() {
     ratedMatchCandidatesCache = null;
     localStorage.removeItem(LOCAL_RATE_MATCH_CANDIDATES_CACHE_KEY);
+    localStorage.removeItem(LEGACY_RATE_MATCH_CANDIDATES_CACHE_KEY);
 }
 
 function shouldRefetchRateMatchCandidates(cache, currentEffectiveRating, playerId, characterId) {
@@ -750,7 +765,7 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
     for (let i = 0; i < RATE_MATCH_RANGE_STEPS.length; i += 1) {
         const range = RATE_MATCH_RANGE_STEPS[i];
         const rateMin = Math.max(100, playerDisplayRate - range);
-        const rateMax = playerDisplayRate + range + MAX_PROVISIONAL_PENALTY;
+        const rateMax = playerDisplayRate + range;
         const snapshot = await db.collection('matchableCharacters')
             .where('displayRate', '>=', rateMin)
             .where('displayRate', '<=', rateMax)
@@ -775,6 +790,15 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
             if (docPlayerId && candidatePlayerIds.has(docPlayerId)) {
                 return;
             }
+            const candidateDisplayRate = Number.isFinite(data.displayRate)
+                ? data.displayRate
+                : calculateEffectiveRate(
+                    Number.isFinite(data.rate) ? data.rate : 1500,
+                    Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
+                );
+            if (Math.abs(candidateDisplayRate - playerDisplayRate) > RATE_MATCH_MAX_DIFF) {
+                return;
+            }
             candidates.push({
                 id: doc.id,
                 playerId: docPlayerId,
@@ -783,12 +807,7 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
                 style: Number.isFinite(data.style) ? data.style : 0,
                 rate: Number.isFinite(data.rate) ? data.rate : 1500,
                 ratedMatches: Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0,
-                displayRate: Number.isFinite(data.displayRate)
-                    ? data.displayRate
-                    : calculateEffectiveRate(
-                        Number.isFinite(data.rate) ? data.rate : 1500,
-                        Number.isFinite(data.ratedMatches) ? data.ratedMatches : 0
-                    ),
+                displayRate: candidateDisplayRate,
                 atk: Number.isFinite(data.atk) ? data.atk : 10,
                 def: Number.isFinite(data.def) ? data.def : 10,
                 spd: Number.isFinite(data.spd) ? data.spd : 10,
@@ -834,6 +853,9 @@ async function fetchRateMatchCandidates(playerDisplayRate, playerId) {
             const displayRate = Number.isFinite(data.displayRate)
                 ? data.displayRate
                 : calculateEffectiveRate(rate, ratedMatches);
+            if (Math.abs(displayRate - playerDisplayRate) > RATE_MATCH_MAX_DIFF) {
+                return;
+            }
 
             candidates.push({
                 id: doc.id,
