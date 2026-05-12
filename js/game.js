@@ -5491,10 +5491,20 @@ function renderStatRows(containerId, targetPlayer) {
         { key: 'tec', code: 'TEC' },
         { key: 'sta', code: 'STA' }
     ];
-    container.innerHTML = stats.map(({ key, code }) => {
-        const cap = getStatCap(targetPlayer.style, key);
+    const getSafePositiveCap = rawCap => {
+        const capNumber = Number(rawCap);
+        return Number.isFinite(capNumber) && capNumber > 0 ? capNumber : 0;
+    };
+    const statsWithCap = stats.map(({ key, code }) => ({
+        key,
+        code,
+        cap: getSafePositiveCap(getStatCap(targetPlayer.style, key))
+    }));
+    const displayMaxCap = Math.max(...statsWithCap.map(({ cap }) => cap), 0);
+    container.innerHTML = statsWithCap.map(({ key, code, cap }) => {
         const displayVal = getDisplayStatValue(targetPlayer, key);
-        const percent = Math.min(100, (displayVal / cap * 100));
+        const valuePercent = cap > 0 ? Math.min(100, (displayVal / cap * 100)) : 0;
+        const capPercent = displayMaxCap > 0 ? Math.min(100, (cap / displayMaxCap * 100)) : 0;
         const traitLabel = getStatTraitLabel(cap);
         const traitClass = getStatTraitClass(cap);
         const name = getStatDisplayName(key);
@@ -5505,7 +5515,11 @@ function renderStatRows(containerId, targetPlayer) {
     <span class="stat-number">${displayVal} / ${cap}</span>
     <span class="stat-trait ${traitClass}">${traitLabel}</span>
   </div>
-  <div class="stat-bar"><div class="stat-bar-fill" style="width:${percent}%"></div></div>
+  <div class="stat-bar-area">
+    <div class="stat-bar-cap" style="width:${capPercent}%">
+      <div class="stat-bar-fill" style="width:${valuePercent}%"></div>
+    </div>
+  </div>
 </div>`;
     }).join('');
 }
