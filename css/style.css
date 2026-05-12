@@ -3324,6 +3324,19 @@ section h3 {
     margin-bottom: 6px;
 }
 
+.stat-bar-area {
+    width: 100%;
+    height: 10px;
+    background: transparent;
+}
+
+.stat-bar-cap {
+    height: 100%;
+    background: #e0e0e0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
 .stat-code {
     font-size: 12px;
     font-weight: 900;
